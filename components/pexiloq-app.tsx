@@ -2,9 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ArrowUpRight, Check, CircleAlert, Copy, ExternalLink, Eye, GripVertical, Layers, Link2, Loader2, LogOut, Menu, Palette, Plus, Save, Settings, Trash2, Type, Upload, UserRound, X, ZoomIn, Zap } from 'lucide-react'
-import { auth, deleteAccount, firebaseEnabled, loadAnalytics, loadCollection, loadProfile, loadProfileByUsername, recordAnalytics, saveCollection, saveProfile } from '@/lib/firebase'
+import { auth, deleteAccount, firebaseEnabled, loadAnalytics, loadPublicBundle, loadUserBundle, recordAnalytics, saveItems, saveProfile } from '@/lib/firebase'
 import { LanguageSwitcher, useI18n } from '@/components/i18n-provider'
 import { deleteUser, EmailAuthProvider, GoogleAuthProvider, onAuthStateChanged, reauthenticateWithCredential, reauthenticateWithPopup, signOut } from 'firebase/auth'
 
@@ -231,10 +231,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setUid(user?.uid || null)
       try {
         if (user) {
-          const [p, l, pr] = await Promise.all([loadProfile(user.uid), loadCollection(user.uid, 'links'), loadCollection(user.uid, 'projects')])
-          if (p) setProfile(normalizeProfile(p as Profile))
-          if (l.length) setLinks(l as LinkItem[])
-          if (pr.length) setProjects(pr as Project[])
+          const bundle = await loadUserBundle(user.uid)
+          if (bundle?.profile) setProfile(normalizeProfile(bundle.profile as Profile))
+          if (bundle?.links.length) setLinks(bundle.links as LinkItem[])
+          if (bundle?.projects.length) setProjects(bundle.projects as Project[])
         } else {
           setProfile(emptyProfile)
           setLinks([])
@@ -250,8 +250,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     })
   }, [])
   const persistProfile = async (next: Profile) => { setProfile((prev) => prev === next || JSON.stringify(prev) === JSON.stringify(next) ? prev : next); if (uid) await saveProfile(uid, next as any) }
-  const persistLinks = async (next: LinkItem[]) => { setLinks((prev) => prev === next || JSON.stringify(prev) === JSON.stringify(next) ? prev : next); if (uid) await saveCollection(uid, 'links', next) }
-  const persistProjects = async (next: Project[]) => { setProjects((prev) => prev === next || JSON.stringify(prev) === JSON.stringify(next) ? prev : next); if (uid) await saveCollection(uid, 'projects', next) }
+  const persistLinks = async (next: LinkItem[]) => { setLinks((prev) => prev === next || JSON.stringify(prev) === JSON.stringify(next) ? prev : next); if (uid) await saveItems(uid, 'links', next) }
+  const persistProjects = async (next: Project[]) => { setProjects((prev) => prev === next || JSON.stringify(prev) === JSON.stringify(next) ? prev : next); if (uid) await saveItems(uid, 'projects', next) }
   return <WorkspaceContext.Provider value={{ profile, links, projects, loading, persistProfile, persistLinks, persistProjects, uid }}>{children}</WorkspaceContext.Provider>
 }
 
@@ -685,7 +685,7 @@ export function Overview() {
             </div>
             <Link href="/dashboard/profile" className="text-sm underline underline-offset-4">{t('edit')}</Link>
           </div>
-          <div className="mt-6"><ProfileCard profile={profile} links={links} projects={projects} preview /></div>
+          <div className="mt-6"><PhonePreviewFrame profile={profile}><ProfileCard profile={profile} links={links} projects={projects} preview /></PhonePreviewFrame></div>
         </div>
         <div className="rounded-2xl bg-secondary p-6">
           <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('nextSteps')}</p>
@@ -750,8 +750,8 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
     if (timer.current) { window.clearTimeout(timer.current); timer.current = null }
     const { profile: p, links: l, projects: pr } = latest.current
     if (uid && (kind === 'profile' || kind === 'appearance')) void saveProfile(uid, p as any)
-    if (uid && kind === 'links') void saveCollection(uid, 'links', l)
-    if (uid && kind === 'projects') void saveCollection(uid, 'projects', pr)
+    if (uid && kind === 'links') void saveItems(uid, 'links', l)
+    if (uid && kind === 'projects') void saveItems(uid, 'projects', pr)
   }, [uid, kind])
   async function save() { await flushNow(); showSaved() }
   const addLink = () => setDraftLinks([...draftLinks, { id: crypto.randomUUID(), title: '', url: 'https://', visible: true }])
@@ -816,13 +816,13 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
               </div>
             </div>
           </div>
-          <div><PreviewNote /> <PreviewCanvas profile={draftProfile}><ProfileCard profile={draftProfile} links={draftLinks} projects={draftProjects} preview /></PreviewCanvas></div>
+          <div><PreviewNote /> <PhonePreviewFrame profile={draftProfile}><ProfileCard profile={draftProfile} links={draftLinks} projects={draftProjects} preview /></PhonePreviewFrame></div>
         </div>
       )}
       {kind === 'appearance' && (
         <div className="grid gap-8 lg:grid-cols-[1fr_0.75fr]">
           <div className="rounded-2xl border bg-card p-6"><AppearanceControls draft={draftProfile} onChange={setDraftProfile} uid={uid} /></div>
-          <div><PreviewNote /> <PreviewCanvas profile={draftProfile}><ProfileCard profile={draftProfile} links={draftLinks} projects={draftProjects} preview /></PreviewCanvas></div>
+          <div><PreviewNote /> <PhonePreviewFrame profile={draftProfile}><ProfileCard profile={draftProfile} links={draftLinks} projects={draftProjects} preview /></PhonePreviewFrame></div>
         </div>
       )}
       {kind === 'links' && (
@@ -1244,7 +1244,7 @@ function Onboarding() {
               <button onClick={() => setField({ isPublic: true })} className={`rounded-2xl border p-5 text-left transition ${draft.isPublic === false ? 'hover:border-foreground/40' : 'border-foreground bg-secondary'}`}><p className="text-sm font-medium">{t('publicProfile')}</p><p className="mt-2 text-xs leading-5 text-muted-foreground">{t('publicProfileText')}</p></button>
               <button onClick={() => setField({ isPublic: false })} className={`rounded-2xl border p-5 text-left transition ${draft.isPublic === false ? 'border-foreground bg-secondary' : 'hover:border-foreground/40'}`}><p className="text-sm font-medium">{t('privateProfile')}</p><p className="mt-2 text-xs leading-5 text-muted-foreground">{t('privateProfileText')}</p></button>
             </div>
-            <div className="mt-8 border-t pt-6"><PreviewNote /> <PreviewCanvas profile={draft}><ProfileCard profile={draft} links={draftLinks.filter((i) => i.visible)} projects={draftProjects.filter((i) => i.visible)} preview /></PreviewCanvas></div>
+            <div className="mt-8 border-t pt-6"><PreviewNote /> <PhonePreviewFrame profile={draft}><ProfileCard profile={draft} links={draftLinks.filter((i) => i.visible)} projects={draftProjects.filter((i) => i.visible)} preview /></PhonePreviewFrame></div>
           </div>
         )}
         {finishError && <p role="alert" className="mt-6 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">{finishError}</p>}
@@ -1582,11 +1582,47 @@ function PreviewNote() {
   return <p className="mb-4 text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('preview')}</p>
 }
 
-function PreviewCanvas({ profile, children }: { profile: Profile; children: React.ReactNode }) {
+function useElementSize<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null)
+  const [size, setSize] = useState({ width: 0, height: 0 })
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const update = () => setSize({ width: el.offsetWidth, height: el.offsetHeight })
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  return { ref, ...size }
+}
+
+// Real device width the profile page is authored at (roughly an iPhone's CSS viewport).
+// Content is measured and scaled to fit the frame rather than reflowing, so the preview always
+// wraps text and lays out exactly as it would on an actual phone at any preview size.
+const PHONE_CONTENT_WIDTH = 390
+
+function PhonePreviewFrame({ profile, children }: { profile: Profile; children: React.ReactNode }) {
+  const { ref: screenRef, width: screenWidth } = useElementSize<HTMLDivElement>()
+  const { ref: contentRef, height: contentHeight } = useElementSize<HTMLDivElement>()
+  const scale = screenWidth > 0 ? screenWidth / PHONE_CONTENT_WIDTH : 1
+  const skin = profile.theme === 'dark' ? 'bg-[#20221f] text-[#f5f5f2]' : 'bg-background text-foreground'
   return (
-    <PageBackground profile={profile} className={`rounded-2xl p-5 sm:p-8 ${profile.theme === 'dark' ? 'bg-[#20221f]' : 'bg-background'}`}>
-      {children}
-    </PageBackground>
+    <div className="pexiloq-phone-frame">
+      <div className="pexiloq-phone-shell">
+        <div className="pexiloq-phone-screen" ref={screenRef}>
+          <div className="pexiloq-phone-scroll">
+            <div style={{ position: 'relative', height: contentHeight ? contentHeight * scale : undefined }}>
+              <div ref={contentRef} style={{ position: 'absolute', top: 0, left: 0, width: PHONE_CONTENT_WIDTH, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+                <PageBackground profile={profile} className={`min-h-[844px] px-5 py-8 ${skin}`}>
+                  {children}
+                </PageBackground>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -1710,20 +1746,58 @@ export function SettingsPage() {
   )
 }
 
+// Public-profile data rarely changes second-to-second, but the page can be opened repeatedly
+// by the same visitor (reloads, re-opening the link, multiple tabs). Caching the fetched bundle
+// in the browser for a short window avoids re-reading Firestore for those repeat opens — on a
+// Firebase Spark (free) plan every read counts against a small daily quota, so cutting repeat
+// reads from the same visitor matters a lot under real traffic.
+const PUBLIC_PROFILE_CACHE_MS = 60_000
+function readPublicProfileCache(username: string) {
+  try {
+    const raw = window.localStorage.getItem(`pxl_pub_${username}`)
+    if (!raw) return null
+    const { data, ts } = JSON.parse(raw)
+    if (Date.now() - ts > PUBLIC_PROFILE_CACHE_MS) return null
+    return data as { profile: Profile; links: LinkItem[]; projects: Project[] }
+  } catch { return null }
+}
+function writePublicProfileCache(username: string, data: unknown) {
+  try { window.localStorage.setItem(`pxl_pub_${username}`, JSON.stringify({ data, ts: Date.now() })) } catch { /* storage full/blocked, skip caching */ }
+}
+
+// A page view only needs to be recorded once per visitor per visit, not once per reload. This
+// dedupes writes across reloads/re-opens within a window, instead of only within one component
+// mount, cutting down repeat analytics writes for the same visitor.
+const VIEW_DEDUPE_MS = 30 * 60 * 1000
+function shouldRecordView(uid: string) {
+  try {
+    const key = `pxl_view_${uid}`
+    const last = Number(window.localStorage.getItem(key) || 0)
+    if (Date.now() - last < VIEW_DEDUPE_MS) return false
+    window.localStorage.setItem(key, String(Date.now()))
+    return true
+  } catch { return true }
+}
+
 export function PublicProfile({ username }: { username?: string }) {
   const { t } = useI18n()
   const [data, setData] = useState<{ profile: Profile; links: LinkItem[]; projects: Project[] } | null | 'missing'>(null)
   const viewRecorded = useRef<string | null>(null)
+  const lastClick = useRef<string | null>(null)
   useEffect(() => {
     let live = true
     async function load() {
       if (!username || !firebaseEnabled) { setData('missing'); return }
+      const cached = readPublicProfileCache(username)
+      if (cached) { setData(cached); return }
       try {
-        const p = await loadProfileByUsername(username)
+        const bundle = await loadPublicBundle(username)
         if (!live) return
-        if (!p || !p.uid) { setData('missing'); return }
-        const [l, pr] = await Promise.all([loadCollection(p.uid, 'links'), loadCollection(p.uid, 'projects')])
-        if (live) setData({ profile: { ...normalizeProfile(p as Profile), isPublic: (p as Profile).isPublic !== false }, links: l as LinkItem[], projects: pr as Project[] })
+        if (!bundle) { setData('missing'); return }
+        const p = bundle.profile as Profile
+        const result = { profile: { ...normalizeProfile(p), isPublic: p.isPublic !== false }, links: bundle.links as LinkItem[], projects: bundle.projects as Project[] }
+        setData(result)
+        writePublicProfileCache(username, result)
       } catch { if (live) setData('missing') }
     }
     void load()
@@ -1735,10 +1809,17 @@ export function PublicProfile({ username }: { username?: string }) {
   const overlay = Boolean(data !== null && data !== 'missing' && data.profile.backgroundStyle === 'image' && data.profile.backgroundImageURL && data.profile.backgroundOverlay > 0)
   const pageUid = data !== null && data !== 'missing' ? data.profile.uid : null
   useEffect(() => {
-    if (pageUid && viewRecorded.current !== pageUid) { viewRecorded.current = pageUid; void recordAnalytics(pageUid, 'views') }
+    if (pageUid && viewRecorded.current !== pageUid && shouldRecordView(pageUid)) { viewRecorded.current = pageUid; void recordAnalytics(pageUid, 'views') }
   }, [pageUid])
   if (data === null) return <LoadingScreen />
-  const track = (type: 'links' | 'projects' | 'socials', key: string) => { if (pageUid) void recordAnalytics(pageUid, type, key) }
+  const track = (type: 'links' | 'projects' | 'socials', key: string) => {
+    if (!pageUid) return
+    const fingerprint = `${type}:${key}`
+    if (lastClick.current === fingerprint) return // guards against duplicate fires (e.g. double-click/bubbled events)
+    lastClick.current = fingerprint
+    window.setTimeout(() => { if (lastClick.current === fingerprint) lastClick.current = null }, 2000)
+    void recordAnalytics(pageUid, type, key)
+  }
   const loaded = data !== 'missing' ? data : null
   return (
     <main className={`relative min-h-screen px-5 py-8 ${skin} ${animated ? 'pexiloq-animated-gradient' : ''}`} style={pageStyle}>

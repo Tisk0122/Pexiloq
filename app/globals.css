@@ -109,3 +109,48 @@ body { @apply bg-background text-foreground font-sans antialiased; }
   animation: pexiloq-avatar-spin 6s linear infinite;
 }
 .pexiloq-avatar-glow { animation: pexiloq-avatar-glow 2.2s ease-in-out infinite; }
+
+/* Live preview: a phone-shaped frame at a fixed device aspect ratio (390 × 844, roughly an
+   iPhone's CSS viewport). Content inside is measured and scaled with JS to that real width, so
+   the preview always shows the same width-to-height proportions a visitor's phone would — on a
+   wide desktop sidebar or a narrow mobile screen alike — instead of stretching to fill whatever
+   column happens to contain it. */
+.pexiloq-phone-frame { width: 100%; max-width: 21rem; margin-inline: auto; }
+.pexiloq-phone-shell {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 390 / 844;
+  padding: 14px;
+  border-radius: 2.75rem;
+  background: linear-gradient(180deg, #2b2b2b, #0a0a0a);
+  box-shadow: 0 32px 64px -32px rgba(0, 0, 0, .45), inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
+.pexiloq-phone-shell::before {
+  content: '';
+  position: absolute;
+  top: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5.5rem;
+  height: 1.5rem;
+  background: #0a0a0a;
+  border-radius: 999px;
+  z-index: 3;
+}
+.pexiloq-phone-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 2rem;
+  overflow: hidden;
+  background: var(--background);
+}
+.pexiloq-phone-scroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.pexiloq-phone-scroll::-webkit-scrollbar { display: none; }

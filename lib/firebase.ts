@@ -57,23 +57,64 @@ export async function loadProfileByUsername(username: string) {
   return snap.docs[0]?.data() || null
 }
 
-export async function saveCollection(uid: string, collection: 'links' | 'projects', items: unknown[]) {
+// --- links & projects storage -------------------------------------------------
+// These used to live in per-item subcollections (users/{uid}/links/{id}, .../projects/{id}).
+// That meant a single page view or save could cost N+1 Firestore reads/writes (one per item),
+// which burns through the Spark (free) plan's daily quota fast under real traffic.
+// Now the whole array is stored as one field on the users/{uid} document, so loading or
+// saving links/projects is always exactly 1 read / 1 write, no matter how many items there are.
+
+export async function saveItems(uid: string, kind: 'links' | 'projects', items: unknown[]) {
   const { db: firestore } = requireFirebase()
-  const { collection: collectionRef, doc, getDocs, writeBatch, serverTimestamp } = await import('firebase/firestore')
-  const batch = writeBatch(firestore)
-  const parent = collectionRef(firestore, 'users', uid, collection)
-  const existing = await getDocs(collectionRef(firestore, 'users', uid, collection))
-  const ids = new Set((items as { id: string }[]).map((item) => item.id))
-  existing.forEach((d) => { if (!ids.has(d.id)) batch.delete(d.ref) })
-  items.forEach((item: any, index) => batch.set(doc(parent, item.id), { ...item, order: index, updatedAt: serverTimestamp() }))
-  await batch.commit()
+  const { doc, setDoc, serverTimestamp } = await import('firebase/firestore')
+  await setDoc(doc(firestore, 'users', uid), { [kind]: items, updatedAt: serverTimestamp() }, { merge: true })
 }
 
-export async function loadCollection(uid: string, collection: 'links' | 'projects') {
+// Back-compat: reads the old per-item subcollection. Only ever hit for accounts created
+// before this change, and only until they've been migrated (see loadUserBundle below).
+async function legacyLoadCollection(uid: string, kind: 'links' | 'projects') {
   const { db: firestore } = requireFirebase()
   const { collection: collectionRef, getDocs, orderBy, query } = await import('firebase/firestore')
-  const snap = await getDocs(query(collectionRef(firestore, 'users', uid, collection), orderBy('order')))
-  return snap.docs.map((item) => item.data())
+  try {
+    const snap = await getDocs(query(collectionRef(firestore, 'users', uid, kind), orderBy('order')))
+    return snap.docs.map((item) => item.data())
+  } catch { return [] }
+}
+
+// Fetches profile + links + projects for the signed-in owner in a single document read.
+// If the account predates this change (no `links`/`projects` fields yet), it falls back to the
+// legacy subcollections just this once and writes the migrated arrays back onto the doc so every
+// subsequent load (by the owner, or by any public visitor) costs a single read from then on.
+export async function loadUserBundle(uid: string) {
+  const data = await loadProfile(uid)
+  if (!data) return null
+  let links = (data as any).links
+  let projects = (data as any).projects
+  let needsMigration = false
+  if (!Array.isArray(links)) { links = await legacyLoadCollection(uid, 'links'); needsMigration = true }
+  if (!Array.isArray(projects)) { projects = await legacyLoadCollection(uid, 'projects'); needsMigration = true }
+  if (needsMigration) {
+    try {
+      const { db: firestore } = requireFirebase()
+      const { doc, setDoc, serverTimestamp } = await import('firebase/firestore')
+      await setDoc(doc(firestore, 'users', uid), { links, projects, updatedAt: serverTimestamp() }, { merge: true })
+    } catch { /* best effort; will just retry the fallback next load */ }
+  }
+  return { profile: data, links, projects }
+}
+
+// Fetches a public profile page by username in a single document read (the query itself).
+// Falls back to the legacy subcollections for not-yet-migrated accounts (no write here, since
+// an anonymous visitor isn't authenticated as the profile owner and Firestore rules disallow it —
+// migration for those accounts completes the next time the owner opens their own dashboard).
+export async function loadPublicBundle(username: string) {
+  const data = await loadProfileByUsername(username)
+  if (!data || !(data as any).uid) return null
+  let links = (data as any).links
+  let projects = (data as any).projects
+  if (!Array.isArray(links)) links = await legacyLoadCollection((data as any).uid, 'links')
+  if (!Array.isArray(projects)) projects = await legacyLoadCollection((data as any).uid, 'projects')
+  return { profile: data, links, projects }
 }
 
 export type AnalyticsData = { views: number; links: Record<string, number>; projects: Record<string, number>; socials: Record<string, number> }
