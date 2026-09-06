@@ -1,0 +1,111 @@
+@import 'tailwindcss';
+
+:lang(ja), :lang(zh), :lang(ko), :lang(hi) { font-family: var(--font-cjk), ui-sans-serif, sans-serif; }
+:lang(ja) h1, :lang(ja) h2, :lang(ja) h3, :lang(zh) h1, :lang(zh) h2, :lang(zh) h3, :lang(ko) h1, :lang(ko) h2, :lang(ko) h3, :lang(hi) h1, :lang(hi) h2, :lang(hi) h3 { font-family: var(--font-cjk), ui-sans-serif, sans-serif; }
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: 'Geist', 'Geist Fallback';
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
+
+:root {
+  color-scheme: light;
+  --background: #f5f5f2;
+  --foreground: #151515;
+  --card: #fbfbf8;
+  --card-foreground: #151515;
+  --popover: #fbfbf8;
+  --popover-foreground: #151515;
+  --primary: #171717;
+  --primary-foreground: #f5f5f2;
+  --secondary: #eeeee9;
+  --secondary-foreground: #151515;
+  --muted: #eeeee9;
+  --muted-foreground: #777771;
+  --accent: #e5e5df;
+  --accent-foreground: #151515;
+  --destructive: #b6534c;
+  --border: #deded8;
+  --input: #deded8;
+  --ring: #8e8e86;
+  --radius: 0.75rem;
+}
+
+* { @apply border-border outline-ring/50; }
+button:not(:disabled) { cursor: pointer; }
+html { scroll-behavior: smooth; }
+html, body { max-width: 100vw; overflow-x: hidden; }
+body { @apply bg-background text-foreground font-sans antialiased; }
+::selection { background: #d9e2dc; color: #151515; }
+
+@keyframes pexiloq-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.07); }
+}
+
+@keyframes pexiloq-loadbar {
+  0% { transform: translateX(-120%); }
+  50% { transform: translateX(65%); }
+  100% { transform: translateX(280%); }
+}
+
+@keyframes pexiloq-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.pexiloq-fade-in { animation: pexiloq-fade-in 0.4s ease-out both; }
+
+.pexiloq-font-display { font-family: Georgia, 'Times New Roman', serif; font-weight: 700; letter-spacing: -0.01em; }
+.pexiloq-font-rounded { font-family: 'Varela Round', 'Arial Rounded MT Bold', ui-rounded, system-ui, sans-serif; }
+.pexiloq-font-elegant { font-family: 'Cormorant Garamond', Didot, 'Bodoni MT', Georgia, serif; font-weight: 500; letter-spacing: 0.01em; }
+
+@keyframes pexiloq-gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.pexiloq-animated-gradient { background-size: 200% 200%; animation: pexiloq-gradient-shift 12s ease infinite; }
+
+@keyframes pexiloq-avatar-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes pexiloq-avatar-glow {
+  0%, 100% { box-shadow: 0 0 0 2px var(--pexiloq-avatar-ring-color, currentColor), 0 0 12px 2px var(--pexiloq-avatar-ring-color, currentColor); }
+  50% { box-shadow: 0 0 0 2px var(--pexiloq-avatar-ring-color, currentColor), 0 0 22px 6px var(--pexiloq-avatar-ring-color, currentColor); }
+}
+.pexiloq-avatar-pulse { animation: pexiloq-pulse 2.4s ease-in-out infinite; }
+.pexiloq-avatar-spin::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+  border: 2px dashed var(--pexiloq-avatar-ring-color, currentColor);
+  animation: pexiloq-avatar-spin 6s linear infinite;
+}
+.pexiloq-avatar-glow { animation: pexiloq-avatar-glow 2.2s ease-in-out infinite; }
