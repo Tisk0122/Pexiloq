@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
-import { ArrowUpRight, Check, CircleAlert, Copy, ExternalLink, Eye, GripVertical, Layers, Link2, Loader2, LogOut, Menu, Palette, Plus, Save, Settings, Trash2, Type, Upload, UserRound, Zap } from 'lucide-react'
+import { ArrowUpRight, Check, CircleAlert, Copy, ExternalLink, Eye, GripVertical, Layers, Link2, Loader2, LogOut, Menu, Palette, Plus, Save, Settings, Trash2, Type, Upload, UserRound, X, ZoomIn, Zap } from 'lucide-react'
 import { auth, deleteAccount, firebaseEnabled, loadAnalytics, loadCollection, loadProfile, loadProfileByUsername, recordAnalytics, saveCollection, saveProfile } from '@/lib/firebase'
 import { LanguageSwitcher, useI18n } from '@/components/i18n-provider'
 import { deleteUser, EmailAuthProvider, GoogleAuthProvider, onAuthStateChanged, reauthenticateWithCredential, reauthenticateWithPopup, signOut } from 'firebase/auth'
@@ -651,7 +651,7 @@ export function Overview() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <Stat label={t('liveLinks')} value={String(links.filter((i) => i.visible).length)} accent={profile.accentColor} />
         <Stat label={t('projects')} value={String(projects.filter((i) => i.visible).length)} accent={profile.accentColor} />
-        <Stat label={t('profileStatus')} value={profile.username ? t('live') : t('draft')} accent={profile.accentColor} />
+        <Stat label={t('profileStatus')} value={profile.username ? (profile.isPublic === false ? t('privateProfile') : t('live')) : t('draft')} accent={profile.accentColor} />
         <Stat label={t('pageViews')} value={String(stats?.views ?? 0)} accent={profile.accentColor} />
         <Stat label={t('totalClicks')} value={String(totalClicks)} accent={profile.accentColor} />
       </div>
@@ -777,7 +777,7 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
                 </div>
                 <div className="grid flex-1 gap-2">
                   <input value={draftProfile.photoURL || ''} onChange={(e) => setDraftProfile({ ...draftProfile, photoURL: e.target.value.trim() })} className="w-full rounded-lg border bg-background px-3 py-2 text-sm" placeholder="https://…" />
-                  <ImageUploader uid={uid} maxDimension={512} onUploaded={(url) => setDraftProfile({ ...draftProfile, photoURL: url })} />
+                  <ImageUploader uid={uid} maxDimension={512} value={draftProfile.photoURL} shape="circle" aspect={1} onUploaded={(url) => setDraftProfile({ ...draftProfile, photoURL: url })} />
                 </div>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">{t('photoUrlHint')}</p>
@@ -838,7 +838,7 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
               className={`flex flex-col gap-3 rounded-2xl border bg-card p-4 transition sm:flex-row sm:items-center ${dragIndex === index ? 'opacity-50' : ''}`}
             >
               <span className="hidden cursor-grab select-none text-muted-foreground active:cursor-grabbing sm:block" title={t('dragToReorder')}><GripVertical className="size-4" /></span>
-              <button className="text-muted-foreground transition hover:text-destructive" onClick={() => setDraftLinks(draftLinks.filter((x) => x.id !== item.id))} aria-label={t('deleteLink')}><Trash2 className="size-4" /></button>
+              <button className="text-muted-foreground transition hover:text-destructive" onClick={() => { void deleteStoredImage(uid, item.imageURL); setDraftLinks(draftLinks.filter((x) => x.id !== item.id)) }} aria-label={t('deleteLink')}><Trash2 className="size-4" /></button>
               {faviconFor(item.url) && <img src={faviconFor(item.url)} alt="" className="hidden size-5 rounded-sm sm:block" />}
               <div className="grid flex-1 gap-2">
                 <div className="grid gap-2 md:grid-cols-2">
@@ -870,7 +870,7 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
                 {item.displayStyle === 'thumbnail' && (
                   <div className="grid gap-2 border-t pt-2 md:grid-cols-2">
                     <input value={item.imageURL || ''} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, imageURL: e.target.value.trim() } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('linkThumbnailUrl')} />
-                    <ImageUploader uid={uid} maxDimension={512} onUploaded={(url) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, imageURL: url } : x))} />
+                    <ImageUploader uid={uid} maxDimension={512} value={item.imageURL} shape="rect" aspect={1} onUploaded={(url) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, imageURL: url } : x))} />
                   </div>
                 )}
               </div>
@@ -894,14 +894,14 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
             >
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-2 text-sm font-medium"><span className="cursor-grab select-none text-muted-foreground active:cursor-grabbing" title={t('dragToReorder')}><GripVertical className="size-4" /></span>{t('project')}</span>
-                <button onClick={() => setDraftProjects(draftProjects.filter((x) => x.id !== item.id))} aria-label={t('deleteProject')} className="text-muted-foreground transition hover:text-destructive"><Trash2 className="size-4" /></button>
+                <button onClick={() => { void deleteStoredImage(uid, item.imageURL); setDraftProjects(draftProjects.filter((x) => x.id !== item.id)) }} aria-label={t('deleteProject')} className="text-muted-foreground transition hover:text-destructive"><Trash2 className="size-4" /></button>
               </div>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 <input value={item.title} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, title: e.target.value } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('projectTitle')} />
                 <input value={item.url} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, url: e.target.value } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('projectUrl')} />
                 <textarea value={item.description} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, description: e.target.value } : x))} className="min-h-24 rounded-lg border bg-background px-3 py-2 text-sm md:col-span-2" placeholder={t('description')} />
                 <input value={item.imageURL || ''} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, imageURL: e.target.value.trim() } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm md:col-span-2" placeholder="Image URL (optional) — https://" />
-                <ImageUploader uid={uid} maxDimension={1024} onUploaded={(url) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, imageURL: url } : x))} className="md:col-span-2" />
+                <ImageUploader uid={uid} maxDimension={1024} value={item.imageURL} shape="rect" aspect={16 / 9} onUploaded={(url) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, imageURL: url } : x))} className="md:col-span-2" />
               </div>
             </div>
           ))}
@@ -1055,8 +1055,7 @@ function AppearanceControls({ draft, onChange, uid }: { draft: Profile; onChange
         <p className="mt-1 text-xs text-muted-foreground">{t('coverImageHint')}</p>
         <div className="mt-3 space-y-2">
           <input value={draft.coverImageURL || ''} onChange={(e) => onChange({ ...draft, coverImageURL: e.target.value.trim() })} className="w-full rounded-lg border bg-background px-3 py-2 text-sm" placeholder="https://…" />
-          {uid && <ImageUploader uid={uid} maxDimension={1600} onUploaded={(url) => onChange({ ...draft, coverImageURL: url })} />}
-          {draft.coverImageURL && <button type="button" onClick={() => onChange({ ...draft, coverImageURL: '' })} className="text-xs text-muted-foreground underline underline-offset-4">{t('removeCoverImage')}</button>}
+          {uid && <ImageUploader uid={uid} maxDimension={1600} value={draft.coverImageURL} shape="rect" aspect={3} onUploaded={(url) => onChange({ ...draft, coverImageURL: url })} onRemove={() => onChange({ ...draft, coverImageURL: '' })} />}
         </div>
       </section>
       <section>
@@ -1138,7 +1137,7 @@ function AppearanceControls({ draft, onChange, uid }: { draft: Profile; onChange
         {draft.backgroundStyle === 'image' && (
           <div className="mt-3 space-y-3">
             <input value={draft.backgroundImageURL || ''} onChange={(e) => onChange({ ...draft, backgroundImageURL: e.target.value.trim() })} className="w-full rounded-lg border bg-background px-3 py-2 text-sm" placeholder="https://…" />
-            {uid && <ImageUploader uid={uid} maxDimension={1920} onUploaded={(url) => onChange({ ...draft, backgroundImageURL: url })} />}
+            {uid && <ImageUploader uid={uid} maxDimension={1920} value={draft.backgroundImageURL} shape="rect" aspect={16 / 9} onUploaded={(url) => onChange({ ...draft, backgroundImageURL: url })} onRemove={() => onChange({ ...draft, backgroundImageURL: '' })} />}
             <div>
               <div className="flex items-center justify-between text-xs text-muted-foreground"><span>{t('backgroundOverlay')}</span><span>{Math.round((draft.backgroundOverlay || 0) * 100)}%</span></div>
               <input type="range" min={0} max={0.85} step={0.05} value={draft.backgroundOverlay || 0} onChange={(e) => onChange({ ...draft, backgroundOverlay: Number(e.target.value) })} className="mt-2 w-full" aria-label={t('backgroundOverlay')} />
@@ -1204,14 +1203,14 @@ function Onboarding() {
             <Field label={t('bio')} value={draft.bio} onChange={(v) => setField({ bio: v })} area />
             <Field label={t('website')} value={draft.website} onChange={(v) => setField({ website: v })} />
             <Field label={t('profilePhoto')} value={draft.photoURL || ''} placeholder="https://" onChange={(v) => setField({ photoURL: v.trim() })} />
-            <ImageUploader uid={uid} maxDimension={512} onUploaded={(url) => setField({ photoURL: url })} />
+            <ImageUploader uid={uid} maxDimension={512} value={draft.photoURL} shape="circle" aspect={1} onUploaded={(url) => setField({ photoURL: url })} />
           </div>
         )}
         {step === 2 && (
           <div className="mt-6 space-y-3">
             {draftLinks.map((item) => (
               <div key={item.id} className="flex flex-col gap-3 rounded-xl border bg-background p-4 sm:flex-row sm:items-center">
-                <button className="text-muted-foreground transition hover:text-destructive" onClick={() => setDraftLinks(draftLinks.filter((x) => x.id !== item.id))} aria-label={t('deleteLink')}><Trash2 className="size-4" /></button>
+                <button className="text-muted-foreground transition hover:text-destructive" onClick={() => { void deleteStoredImage(uid, item.imageURL); setDraftLinks(draftLinks.filter((x) => x.id !== item.id)) }} aria-label={t('deleteLink')}><Trash2 className="size-4" /></button>
                 <input value={item.title} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, title: e.target.value } : x))} className="min-w-0 flex-1 rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('linkTitle')} />
                 <input value={item.url} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, url: e.target.value } : x))} className="min-w-0 flex-1 rounded-lg border bg-background px-3 py-2 text-sm" placeholder="https://" />
                 <button onClick={() => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, visible: !x.visible } : x))} className={`rounded-full px-3 py-1 text-xs transition ${item.visible ? 'bg-secondary font-medium' : 'border text-muted-foreground'}`}>{item.visible ? t('visible') : t('hidden')}</button>
@@ -1226,7 +1225,7 @@ function Onboarding() {
               <div key={item.id} className="rounded-xl border bg-background p-4">
                 <div className="flex justify-between">
                   <p className="text-sm font-medium">{t('project')}</p>
-                  <button onClick={() => setDraftProjects(draftProjects.filter((x) => x.id !== item.id))} aria-label={t('deleteProject')} className="text-muted-foreground transition hover:text-destructive"><Trash2 className="size-4" /></button>
+                  <button onClick={() => { void deleteStoredImage(uid, item.imageURL); setDraftProjects(draftProjects.filter((x) => x.id !== item.id)) }} aria-label={t('deleteProject')} className="text-muted-foreground transition hover:text-destructive"><Trash2 className="size-4" /></button>
                 </div>
                 <div className="mt-3 grid gap-3 md:grid-cols-2">
                   <input value={item.title} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, title: e.target.value } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('projectTitle')} />
@@ -1264,6 +1263,26 @@ function Field({ label, value, onChange, area, prefix, placeholder }: { label: s
 
 const R2_MAX_BYTES = 10 * 1024 * 1024
 const IMAGE_QUALITY = 0.82
+
+// Best-effort cleanup: removes a previously uploaded image from R2 once it's no longer
+// referenced anywhere (replaced by a new upload, removed by the user, or its owning link/
+// project/account was deleted). Silently no-ops on externally hosted URLs or if the
+// request fails, since a failed cleanup should never block the user's edit from saving.
+async function deleteStoredImage(uid: string | null | undefined, url?: string | null) {
+  if (!uid || !url) return
+  try {
+    await fetch('/api/upload', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: uid, url }) })
+  } catch { /* best effort */ }
+}
+
+// Deletes every image ever uploaded for this account. Called when the account itself is
+// deleted so avatars, cover/background images, and link/project thumbnails don't linger
+// in storage after the profile is gone.
+async function purgeAllStoredImages(uid: string) {
+  try {
+    await fetch('/api/upload', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: uid, purgeAll: true }) })
+  } catch { /* best effort */ }
+}
 
 function canvasToBlob(canvas: HTMLCanvasElement, mime: string, quality: number): Promise<Blob | null> {
   return new Promise((resolve) => canvas.toBlob(resolve, mime, quality))
@@ -1303,22 +1322,186 @@ async function compressImage(file: File, maxDimension: number): Promise<{ blob: 
   }
 }
 
-function ImageUploader({ uid, onUploaded, label, accept = 'image/*', className = '', maxDimension = 1600 }: { uid: string | null; onUploaded: (url: string) => void; label?: string; accept?: string; className?: string; maxDimension?: number }) {
+// File types that can't be safely re-drawn onto a canvas without losing what makes them
+// useful (SVG stays vector, animated GIF would be flattened to one frame) — for these,
+// uploads skip the crop step and go through as-is, same as the pre-existing behavior.
+const UNCROPPABLE_TYPES = new Set(['image/svg+xml', 'image/gif', 'image/avif'])
+
+type CropShape = 'circle' | 'rect'
+
+// A focal-point picker for images, in the spirit of the avatar/cover-photo adjusters on
+// X and Instagram: drag to reposition, slide to zoom, and the visible frame previews
+// exactly what will be uploaded. Works purely in the source image's own pixel space, so
+// the exported crop is full resolution regardless of how small the on-screen frame is.
+function ImageCropModal({ file, shape, aspect, maxDimension, title, onCancel, onConfirm }: {
+  file: File
+  shape: CropShape
+  aspect: number
+  maxDimension: number
+  title: string
+  onCancel: () => void
+  onConfirm: (blob: Blob, type: string) => void
+}) {
+  const { t } = useI18n()
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const bitmapRef = useRef<ImageBitmap | null>(null)
+  const [ready, setReady] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [zoom, setZoom] = useState(1)
+  const center = useRef({ x: 0, y: 0 })
+  const dragState = useRef<{ x: number; y: number } | null>(null)
+  const frameW = 320
+  const frameH = shape === 'circle' ? 320 : Math.round(320 / aspect)
+
+  useEffect(() => {
+    let cancelled = false
+    createImageBitmap(file).then((bitmap) => {
+      if (cancelled) { bitmap.close(); return }
+      bitmapRef.current = bitmap
+      center.current = { x: bitmap.width / 2, y: bitmap.height / 2 }
+      setReady(true)
+    }).catch(() => { if (!cancelled) setError(t('uploadFailed')) })
+    return () => { cancelled = true; bitmapRef.current?.close() }
+  }, [file])
+
+  function minScale() {
+    const bitmap = bitmapRef.current
+    if (!bitmap) return 1
+    return Math.max(frameW / bitmap.width, frameH / bitmap.height)
+  }
+
+  function sourceRect() {
+    const bitmap = bitmapRef.current
+    if (!bitmap) return { sx: 0, sy: 0, sw: 1, sh: 1 }
+    const scale = minScale() * zoom
+    const sw = Math.min(bitmap.width, frameW / scale)
+    const sh = Math.min(bitmap.height, frameH / scale)
+    const sx = Math.min(Math.max(center.current.x - sw / 2, 0), bitmap.width - sw)
+    const sy = Math.min(Math.max(center.current.y - sh / 2, 0), bitmap.height - sh)
+    return { sx, sy, sw, sh }
+  }
+
+  function draw() {
+    const canvas = canvasRef.current
+    const bitmap = bitmapRef.current
+    if (!canvas || !bitmap) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    const { sx, sy, sw, sh } = sourceRect()
+    ctx.clearRect(0, 0, frameW, frameH)
+    ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, frameW, frameH)
+  }
+
+  useEffect(() => { if (ready) draw() }, [ready, zoom])
+
+  function panBy(dx: number, dy: number) {
+    const bitmap = bitmapRef.current
+    if (!bitmap) return
+    const { sw, sh } = sourceRect()
+    center.current = {
+      x: Math.min(Math.max(center.current.x - dx * (sw / frameW), sw / 2), bitmap.width - sw / 2),
+      y: Math.min(Math.max(center.current.y - dy * (sh / frameH), sh / 2), bitmap.height - sh / 2),
+    }
+    draw()
+  }
+
+  function onPointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    (e.target as HTMLCanvasElement).setPointerCapture(e.pointerId)
+    dragState.current = { x: e.clientX, y: e.clientY }
+  }
+  function onPointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!dragState.current) return
+    const dx = e.clientX - dragState.current.x
+    const dy = e.clientY - dragState.current.y
+    dragState.current = { x: e.clientX, y: e.clientY }
+    panBy(dx, dy)
+  }
+  function onPointerUp() { dragState.current = null }
+
+  async function confirm() {
+    const bitmap = bitmapRef.current
+    if (!bitmap) return
+    setBusy(true)
+    setError('')
+    try {
+      const outW = shape === 'circle' ? maxDimension : maxDimension
+      const outH = shape === 'circle' ? maxDimension : Math.round(maxDimension / aspect)
+      const canvas = document.createElement('canvas')
+      canvas.width = outW
+      canvas.height = outH
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('canvas unavailable')
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = 'high'
+      const { sx, sy, sw, sh } = sourceRect()
+      ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, outW, outH)
+      let best: { blob: Blob; type: string } | null = null
+      for (const m of ['image/webp', 'image/jpeg']) {
+        const blob = await canvasToBlob(canvas, m, IMAGE_QUALITY)
+        if (blob && (!best || blob.size < best.blob.size)) best = { blob, type: m }
+      }
+      if (!best) throw new Error('export failed')
+      onConfirm(best.blob, best.type)
+    } catch {
+      setError(t('uploadFailed'))
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="w-full max-w-sm rounded-2xl border bg-card p-6">
+        <p className="text-sm font-medium">{title}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{t('cropHint')}</p>
+        <div className="mt-4 flex justify-center">
+          <canvas
+            ref={canvasRef}
+            width={frameW}
+            height={frameH}
+            className={`touch-none bg-secondary ${shape === 'circle' ? 'rounded-full' : 'rounded-xl'}`}
+            style={{ width: frameW, height: frameH, cursor: ready ? 'grab' : 'default' }}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerLeave={onPointerUp}
+          />
+        </div>
+        <div className="mt-4 flex items-center gap-3">
+          <ZoomIn className="size-4 shrink-0 text-muted-foreground" />
+          <input
+            type="range"
+            min={1}
+            max={3}
+            step={0.01}
+            value={zoom}
+            disabled={!ready}
+            onChange={(e) => setZoom(Number(e.target.value))}
+            className="w-full"
+            aria-label={t('cropZoom')}
+          />
+        </div>
+        {error && <p role="alert" className="mt-3 flex items-center gap-1.5 text-xs text-destructive"><CircleAlert className="size-3.5" />{error}</p>}
+        <div className="mt-6 flex justify-end gap-3">
+          <button type="button" onClick={onCancel} disabled={busy} className="rounded-full border px-5 py-2.5 text-sm transition hover:border-foreground/40 disabled:opacity-40">{t('cancel')}</button>
+          <button type="button" onClick={confirm} disabled={!ready || busy} className="flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50">{busy ? <Loader2 className="size-4 animate-spin" /> : null}{t('cropApply')}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ImageUploader({ uid, onUploaded, label, accept = 'image/*', className = '', maxDimension = 1600, value, shape = 'rect', aspect = 1, onRemove }: { uid: string | null; onUploaded: (url: string) => void; label?: string; accept?: string; className?: string; maxDimension?: number; value?: string; shape?: CropShape; aspect?: number; onRemove?: () => void }) {
   const { t } = useI18n()
   const [busy, setBusy] = useState(false)
   const [phase, setPhase] = useState<'compress' | 'upload'>('upload')
   const [error, setError] = useState('')
+  const [cropFile, setCropFile] = useState<File | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  async function handleFile(file: File) {
-    setError('')
-    if (!file.type.startsWith('image/')) { setError(t('uploadFailed')); return }
-    if (file.size > R2_MAX_BYTES) { setError(t('fileTooLarge')); return }
+  async function upload(uploadFile: Blob, contentType: string) {
     setBusy(true)
+    setError('')
     try {
-      setPhase('compress')
-      const compressed = await compressImage(file, maxDimension)
-      const uploadFile = compressed?.blob ?? file
-      const contentType = compressed?.type ?? file.type
       setPhase('upload')
       const res = await fetch('/api/upload', {
         method: 'POST',
@@ -1330,6 +1513,9 @@ function ImageUploader({ uid, onUploaded, label, accept = 'image/*', className =
       const put = await fetch(data.uploadUrl, { method: 'PUT', headers: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=31536000, immutable' }, body: uploadFile })
       if (!put.ok) throw new Error('upload error')
       onUploaded(data.publicUrl)
+      // The new image is live — the previous one (if any) is now orphaned, so remove it
+      // from R2 rather than leaving it to accumulate storage costs forever.
+      if (value && value !== data.publicUrl) void deleteStoredImage(uid, value)
     } catch {
       setError(t('uploadFailed'))
     } finally {
@@ -1338,15 +1524,51 @@ function ImageUploader({ uid, onUploaded, label, accept = 'image/*', className =
       if (inputRef.current) inputRef.current.value = ''
     }
   }
+  async function handleFile(file: File) {
+    setError('')
+    if (!file.type.startsWith('image/')) { setError(t('uploadFailed')); return }
+    if (file.size > R2_MAX_BYTES) { setError(t('fileTooLarge')); return }
+    if (UNCROPPABLE_TYPES.has(file.type)) {
+      setBusy(true)
+      setPhase('compress')
+      const compressed = await compressImage(file, maxDimension)
+      await upload(compressed?.blob ?? file, compressed?.type ?? file.type)
+      return
+    }
+    // Raster formats open the crop tool so the person can pick exactly what's shown,
+    // the same reposition-before-you-post step X and Instagram use for avatars/covers.
+    setCropFile(file)
+  }
+  function removeImage() {
+    if (onRemove) onRemove()
+    else onUploaded('')
+    void deleteStoredImage(uid, value)
+  }
   const busyLabel = busy ? (phase === 'compress' ? t('compressing') : t('uploading')) : (label ?? t('uploadImage'))
   return (
-    <div className={className}>
+    <div className={`flex flex-wrap items-center gap-2 ${className}`}>
       <label className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm transition hover:border-foreground/40 ${busy ? 'pointer-events-none opacity-60' : ''}`}>
         {busy ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
         {busyLabel}
         <input ref={inputRef} type="file" accept={accept} className="sr-only" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFile(f) }} />
       </label>
-      {error && <p role="alert" className="mt-2 flex items-center gap-1.5 text-xs text-destructive"><CircleAlert className="size-3.5" />{error}</p>}
+      {value && (
+        <button type="button" onClick={removeImage} disabled={busy} className="inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs text-muted-foreground transition hover:border-destructive/50 hover:text-destructive disabled:opacity-40">
+          <X className="size-3.5" />{t('removeImage')}
+        </button>
+      )}
+      {error && <p role="alert" className="flex w-full items-center gap-1.5 text-xs text-destructive"><CircleAlert className="size-3.5" />{error}</p>}
+      {cropFile && (
+        <ImageCropModal
+          file={cropFile}
+          shape={shape}
+          aspect={aspect}
+          maxDimension={maxDimension}
+          title={label ?? t('uploadImage')}
+          onCancel={() => { setCropFile(null); if (inputRef.current) inputRef.current.value = '' }}
+          onConfirm={(blob, type) => { setCropFile(null); void upload(blob, type) }}
+        />
+      )}
     </div>
   )
 }
@@ -1396,8 +1618,12 @@ export function SettingsPage() {
   async function removeAccount() {
     const user = auth?.currentUser
     if (!user) { router.push('/'); return }
+    const uidToPurge = user.uid
     await deleteUser(user)
-    try { await deleteAccount(user.uid) } catch { /* account gone; best effort cleanup */ }
+    try { await deleteAccount(uidToPurge) } catch { /* account gone; best effort cleanup */ }
+    // Also clear out every avatar/cover/background/link/project image ever uploaded for
+    // this account so nothing is left behind in R2 once the profile itself is gone.
+    void purgeAllStoredImages(uidToPurge)
     router.push('/')
   }
   async function confirmDelete() {

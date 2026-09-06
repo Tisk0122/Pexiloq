@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { getS3, publicUrlFor, r2Config } from '@/lib/r2'
+import { deleteAllObjectsForUser, deleteObject, getS3, keyFromPublicUrl, publicUrlFor, r2Config } from '@/lib/r2'
 
 export const runtime = 'nodejs'
 
@@ -49,4 +49,36 @@ export async function POST(req: Request) {
     { expiresIn: 300, signableHeaders: new Set(['content-type', 'cache-control']) },
   )
   return NextResponse.json({ uploadUrl, publicUrl: publicUrlFor(key), key, bucket, accountId })
+}
+
+// Removes images from R2 so replaced or discarded uploads (old avatar, old cover image,
+// a deleted link/project thumbnail, or an entire deleted account) never linger in the bucket.
+export async function DELETE(req: Request) {
+  if (!r2Config().configured) {
+    return NextResponse.json({ error: 'R2 is not configured. Set the R2_* environment variables.' }, { status: 503 })
+  }
+  const body = await req.json().catch(() => null)
+  const userId = body?.userId
+  if (!userId || typeof userId !== 'string') {
+    return NextResponse.json({ error: 'Missing userId.' }, { status: 400 })
+  }
+  const safeUserId = userId.replace(/[^a-zA-Z0-9_-]/g, '')
+  try {
+    if (body?.purgeAll) {
+      await deleteAllObjectsForUser(safeUserId)
+      return NextResponse.json({ ok: true })
+    }
+    const url: string = body?.url || ''
+    const key = keyFromPublicUrl(url)
+    // A missing/foreign key means the URL isn't one of our R2 objects (e.g. an externally
+    // hosted image the user pasted a link to) or doesn't belong to this user — no-op rather
+    // than error, since there's nothing unsafe or wrong about that from the client's view.
+    if (!key || !key.startsWith(`users/${safeUserId}/`)) {
+      return NextResponse.json({ ok: true, skipped: true })
+    }
+    await deleteObject(key)
+    return NextResponse.json({ ok: true })
+  } catch (err: any) {
+    return NextResponse.json({ error: err?.message || 'Could not delete the image.' }, { status: 500 })
+  }
 }

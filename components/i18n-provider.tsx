@@ -76,6 +76,7 @@ const en: Dictionary = {
   avatarAnimation: 'Avatar animation', avatarAnimNone: 'None', avatarAnimPulse: 'Pulse', avatarAnimSpin: 'Spin', avatarAnimGlow: 'Glow',
   backgroundAnimated: 'Animate gradient', backgroundOverlay: 'Image overlay darkness',
   patternColor: 'Pattern color', patternDensity: 'Pattern density',
+  cropHint: 'Drag to reposition, use the slider to zoom.', cropZoom: 'Zoom', cropApply: 'Apply', removeImage: 'Remove image',
 }
 
 const translations: Record<Language, Dictionary> = {
@@ -145,6 +146,7 @@ const translations: Record<Language, Dictionary> = {
     avatarAnimation: 'アバターのアニメーション', avatarAnimNone: 'なし', avatarAnimPulse: 'パルス', avatarAnimSpin: '回転', avatarAnimGlow: 'グロー',
     backgroundAnimated: 'グラデーションをアニメーション', backgroundOverlay: '画像の暗さオーバーレイ',
     patternColor: 'パターンの色', patternDensity: 'パターンの密度',
+    cropHint: 'ドラッグして位置を調整し、スライダーでズームできます。', cropZoom: 'ズーム', cropApply: '適用', removeImage: '画像を削除',
   },
   zh: {
     ...en, language: '语言', home: '首页', features: '功能', howItWorks: '使用方法', explore: '探索个人主页', login: '登录', create: '创建 Pexiloq',
