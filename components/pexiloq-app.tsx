@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { ArrowUpRight, Check, CircleAlert, Copy, ExternalLink, Eye, GripVertical, Layers, Link2, Loader2, LogOut, Menu, Palette, Plus, Save, Settings, Trash2, Type, Upload, UserRound, X, ZoomIn, Zap } from 'lucide-react'
+import { ArrowUpRight, Check, CircleAlert, Copy, ExternalLink, Eye, GripVertical, Layers, Link2, Loader2, LogOut, Menu, Monitor, Palette, Plus, Save, Settings, Smartphone, Trash2, Type, Upload, UserRound, X, ZoomIn, Zap } from 'lucide-react'
 import { auth, deleteAccount, firebaseEnabled, loadAnalytics, loadPublicBundle, loadUserBundle, recordAnalytics, saveItems, saveProfile } from '@/lib/firebase'
 import { LanguageSwitcher, useI18n } from '@/components/i18n-provider'
 import { deleteUser, EmailAuthProvider, GoogleAuthProvider, onAuthStateChanged, reauthenticateWithCredential, reauthenticateWithPopup, signOut } from 'firebase/auth'
@@ -685,7 +685,7 @@ export function Overview() {
             </div>
             <Link href="/dashboard/profile" className="text-sm underline underline-offset-4">{t('edit')}</Link>
           </div>
-          <div className="mt-6"><PhonePreviewFrame profile={profile}><ProfileCard profile={profile} links={links} projects={projects} preview /></PhonePreviewFrame></div>
+          <div className="mt-6"><LivePreview profile={profile} links={links} projects={projects} note={false} /></div>
         </div>
         <div className="rounded-2xl bg-secondary p-6">
           <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('nextSteps')}</p>
@@ -816,13 +816,13 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
               </div>
             </div>
           </div>
-          <div><PreviewNote /> <PhonePreviewFrame profile={draftProfile}><ProfileCard profile={draftProfile} links={draftLinks} projects={draftProjects} preview /></PhonePreviewFrame></div>
+          <div><LivePreview profile={draftProfile} links={draftLinks} projects={draftProjects} /></div>
         </div>
       )}
       {kind === 'appearance' && (
         <div className="grid gap-8 lg:grid-cols-[1fr_0.75fr]">
           <div className="rounded-2xl border bg-card p-6"><AppearanceControls draft={draftProfile} onChange={setDraftProfile} uid={uid} /></div>
-          <div><PreviewNote /> <PhonePreviewFrame profile={draftProfile}><ProfileCard profile={draftProfile} links={draftLinks} projects={draftProjects} preview /></PhonePreviewFrame></div>
+          <div><LivePreview profile={draftProfile} links={draftLinks} projects={draftProjects} /></div>
         </div>
       )}
       {kind === 'links' && (
@@ -1244,7 +1244,7 @@ function Onboarding() {
               <button onClick={() => setField({ isPublic: true })} className={`rounded-2xl border p-5 text-left transition ${draft.isPublic === false ? 'hover:border-foreground/40' : 'border-foreground bg-secondary'}`}><p className="text-sm font-medium">{t('publicProfile')}</p><p className="mt-2 text-xs leading-5 text-muted-foreground">{t('publicProfileText')}</p></button>
               <button onClick={() => setField({ isPublic: false })} className={`rounded-2xl border p-5 text-left transition ${draft.isPublic === false ? 'border-foreground bg-secondary' : 'hover:border-foreground/40'}`}><p className="text-sm font-medium">{t('privateProfile')}</p><p className="mt-2 text-xs leading-5 text-muted-foreground">{t('privateProfileText')}</p></button>
             </div>
-            <div className="mt-8 border-t pt-6"><PreviewNote /> <PhonePreviewFrame profile={draft}><ProfileCard profile={draft} links={draftLinks.filter((i) => i.visible)} projects={draftProjects.filter((i) => i.visible)} preview /></PhonePreviewFrame></div>
+            <div className="mt-8 border-t pt-6"><LivePreview profile={draft} links={draftLinks.filter((i) => i.visible)} projects={draftProjects.filter((i) => i.visible)} /></div>
           </div>
         )}
         {finishError && <p role="alert" className="mt-6 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">{finishError}</p>}
@@ -1597,10 +1597,15 @@ function useElementSize<T extends HTMLElement>() {
   return { ref, ...size }
 }
 
-// Real device width the profile page is authored at (roughly an iPhone's CSS viewport).
-// Content is measured and scaled to fit the frame rather than reflowing, so the preview always
-// wraps text and lays out exactly as it would on an actual phone at any preview size.
+// Real device widths the profile page is authored at (roughly an iPhone's CSS viewport for
+// "phone", and a common laptop/desktop browser viewport for "desktop"). Content is measured and
+// scaled to fit the frame rather than reflowing, so the preview always wraps text and triggers
+// the same responsive (sm:/md:) rules that a real visitor's device would — including desktop-only
+// layout differences that a phone-width preview could never reveal.
 const PHONE_CONTENT_WIDTH = 390
+const DESKTOP_CONTENT_WIDTH = 1280
+
+export type PreviewDevice = 'phone' | 'desktop'
 
 function PhonePreviewFrame({ profile, children }: { profile: Profile; children: React.ReactNode }) {
   const { ref: screenRef, width: screenWidth } = useElementSize<HTMLDivElement>()
@@ -1622,6 +1627,65 @@ function PhonePreviewFrame({ profile, children }: { profile: Profile; children: 
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function DesktopPreviewFrame({ profile, children }: { profile: Profile; children: React.ReactNode }) {
+  const { ref: screenRef, width: screenWidth } = useElementSize<HTMLDivElement>()
+  const { ref: contentRef, height: contentHeight } = useElementSize<HTMLDivElement>()
+  const scale = screenWidth > 0 ? screenWidth / DESKTOP_CONTENT_WIDTH : 1
+  const skin = profile.theme === 'dark' ? 'bg-[#20221f] text-[#f5f5f2]' : 'bg-background text-foreground'
+  const url = `pexiloq.com/${profile.username || ''}`
+  return (
+    <div className="pexiloq-desktop-frame">
+      <div className="pexiloq-desktop-shell">
+        <div className="pexiloq-desktop-bar">
+          <span className="pexiloq-desktop-dot" /><span className="pexiloq-desktop-dot" /><span className="pexiloq-desktop-dot" />
+          <span className="pexiloq-desktop-url">{url}</span>
+        </div>
+        <div className="pexiloq-desktop-screen" ref={screenRef}>
+          <div className="pexiloq-desktop-scroll">
+            <div style={{ position: 'relative', height: contentHeight ? contentHeight * scale : undefined }}>
+              <div ref={contentRef} style={{ position: 'absolute', top: 0, left: 0, width: DESKTOP_CONTENT_WIDTH, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+                <PageBackground profile={profile} className={`min-h-[800px] px-5 py-10 ${skin}`}>
+                  {children}
+                </PageBackground>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DeviceToggle({ device, onChange }: { device: PreviewDevice; onChange: (device: PreviewDevice) => void }) {
+  const { t } = useI18n()
+  return (
+    <div className="pexiloq-device-toggle" role="group" aria-label={t('preview')}>
+      <button type="button" aria-pressed={device === 'phone'} onClick={() => onChange('phone')}><Smartphone className="size-3.5" />{t('previewPhone')}</button>
+      <button type="button" aria-pressed={device === 'desktop'} onClick={() => onChange('desktop')}><Monitor className="size-3.5" />{t('previewDesktop')}</button>
+    </div>
+  )
+}
+
+// Single entry point for every live-preview surface in the workspace (overview, profile editor,
+// appearance editor, onboarding). Keeping the device toggle + frame selection in one place means
+// every preview behaves identically and stays correct if the preview mechanics ever change.
+function LivePreview({ profile, links, projects, note = true }: { profile: Profile; links: LinkItem[]; projects: Project[]; note?: boolean }) {
+  const [device, setDevice] = useState<PreviewDevice>('phone')
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        {note ? <PreviewNote /> : <span />}
+        <DeviceToggle device={device} onChange={setDevice} />
+      </div>
+      {device === 'phone' ? (
+        <PhonePreviewFrame profile={profile}><ProfileCard profile={profile} links={links} projects={projects} preview /></PhonePreviewFrame>
+      ) : (
+        <DesktopPreviewFrame profile={profile}><ProfileCard profile={profile} links={links} projects={projects} preview /></DesktopPreviewFrame>
+      )}
     </div>
   )
 }
@@ -1808,9 +1872,13 @@ export function PublicProfile({ username }: { username?: string }) {
   const animated = data !== null && data !== 'missing' && data.profile.backgroundStyle === 'gradient' && data.profile.backgroundAnimated
   const overlay = Boolean(data !== null && data !== 'missing' && data.profile.backgroundStyle === 'image' && data.profile.backgroundImageURL && data.profile.backgroundOverlay > 0)
   const pageUid = data !== null && data !== 'missing' ? data.profile.uid : null
+  // Only a genuinely public profile page counts as a "view" — a private profile shows nothing
+  // but a locked notice, so opening it (by the owner previewing their own link, a stale bookmark,
+  // etc.) must never be recorded as a visitor view.
+  const isPublicProfile = data !== null && data !== 'missing' && data.profile.isPublic !== false
   useEffect(() => {
-    if (pageUid && viewRecorded.current !== pageUid && shouldRecordView(pageUid)) { viewRecorded.current = pageUid; void recordAnalytics(pageUid, 'views') }
-  }, [pageUid])
+    if (pageUid && isPublicProfile && viewRecorded.current !== pageUid && shouldRecordView(pageUid)) { viewRecorded.current = pageUid; void recordAnalytics(pageUid, 'views') }
+  }, [pageUid, isPublicProfile])
   if (data === null) return <LoadingScreen />
   const track = (type: 'links' | 'projects' | 'socials', key: string) => {
     if (!pageUid) return
