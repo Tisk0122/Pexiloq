@@ -52,5 +52,115 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
   }
   async function submit(e: React.FormEvent) { e.preventDefault(); if (mode === 'signup' && !accepted) { setError(c.required); return } setBusy(true); setError(''); try { if (!firebaseEnabled || !auth) { router.push('/dashboard'); return }; const result = mode === 'login' ? await signInWithEmailAndPassword(auth, email, password) : await createUserWithEmailAndPassword(auth, email, password); await finish(result) } catch (err: any) { setError(err.code === 'auth/popup-closed-by-user' ? '' : err.message?.replace('Firebase: ', '') || t('somethingWrong')) } finally { setBusy(false) } }
   async function oauth() { if (mode === 'signup' && !accepted) { setError(c.required); return }; setBusy(true); setError(''); try { if (!firebaseEnabled || !auth) { router.push('/dashboard'); return }; await finish(await signInWithPopup(auth, providerFor())) } catch (err: any) { setError(err.code === 'auth/popup-closed-by-user' ? '' : err.message?.replace('Firebase: ', '') || t('somethingWrong')) } finally { setBusy(false) } }
-  return <main className="min-h-screen bg-background px-5 py-6 sm:px-8 sm:py-10"><div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3"><Link href="/" className="inline-flex shrink-0 items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground"><ArrowLeft className="size-4" />{c.home}</Link><div className="flex shrink-0 items-center gap-3"><LanguageSwitcher compact /><Link href="/" aria-label={c.home} className="flex items-center"><img src="/Pexiloq_Logo.png" alt="Pexiloq" width={1774} height={887} className="h-14 w-auto object-contain sm:h-16 md:h-20 lg:h-24" /></Link></div></div><div className="mx-auto grid max-w-6xl items-center gap-12 py-14 lg:grid-cols-[0.8fr_1fr] lg:py-20"><div className="hidden rounded-[2rem] border bg-card p-10 lg:block"><p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">pexiloq / {mode}</p><p className="mt-24 max-w-sm text-4xl font-medium tracking-[-0.07em]">{mode === 'login' ? c.loginBody : c.signupBody}</p><div className="mt-16 flex items-center gap-2 text-sm text-muted-foreground"><Globe2 className="size-4" />{c.home}</div></div><div className="mx-auto w-full max-w-md"><p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{mode === 'login' ? c.loginKicker : c.signupKicker}</p><h1 className="mt-4 text-4xl font-medium tracking-[-0.07em] sm:text-5xl">{mode === 'login' ? c.login : c.signup}</h1><p className="mt-5 leading-7 text-muted-foreground">{mode === 'login' ? c.loginBody : c.signupBody}</p><div className="mt-8 grid grid-cols-1 gap-2"><button type="button" onClick={() => oauth()} disabled={busy} className="rounded-xl border bg-card px-3 py-3 text-xs font-medium transition hover:border-foreground/40 disabled:opacity-50"><span className="mx-auto mb-1 flex size-4 items-center justify-center"><GoogleIcon /></span>{busy ? <><Loader2 className="mr-1 inline size-3 animate-spin" />{c.wait}</> : c.google}</button></div><p className="my-6 text-center text-xs text-muted-foreground">{c.or}</p><form onSubmit={submit} className="space-y-4">{mode === 'signup' && <label className="block text-sm">{c.name}<input required value={name} onChange={(e) => setName(e.target.value)} className="mt-2 w-full rounded-xl border bg-card px-4 py-3 outline-none focus:border-foreground/50" placeholder={c.namePlaceholder} /></label>}<label className="block text-sm">{c.email}<input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-2 w-full rounded-xl border bg-card px-4 py-3 outline-none focus:border-foreground/50" placeholder={c.emailPlaceholder} /></label><label className="block text-sm">{c.password}<input required minLength={6} type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-2 w-full rounded-xl border bg-card px-4 py-3 outline-none focus:border-foreground/50" placeholder={c.passwordPlaceholder} /></label>{mode === 'signup' && <label className="flex items-start gap-3 rounded-xl border bg-secondary/50 p-3 text-xs leading-5 text-muted-foreground"><input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} className="mt-1 size-4 accent-primary" /><span>{c.agree} <button type="button" onClick={() => setLegal('terms')} className="font-medium text-foreground underline underline-offset-2">{c.terms}</button> {c.and} <button type="button" onClick={() => setLegal('privacy')} className="font-medium text-foreground underline underline-offset-2">{c.privacy}</button>.</span></label>}{error && <p role="alert" className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>}<button disabled={busy} className="w-full rounded-full bg-primary px-5 py-3.5 text-sm font-medium text-primary-foreground disabled:opacity-50">{busy ? <><Loader2 className="mr-1 inline size-4 animate-spin" />{c.wait}</> : mode === 'login' ? c.submitLogin : c.submitSignup}<ArrowUpRight className="ml-1 inline size-4" /></button></form><p className="mt-8 text-center text-sm text-muted-foreground">{mode === 'login' ? c.newHere : c.already} <Link className="font-medium text-foreground underline underline-offset-4" href={mode === 'login' ? '/signup' : '/login'}>{mode === 'login' ? c.signupLink : c.loginLink}</Link></p></div></div>{legal && <LegalDialog kind={legal} onClose={() => setLegal(null)} />}</main>
+  return (
+    <main className="min-h-screen bg-background px-5 py-6 sm:px-8 sm:py-10 text-foreground">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between">
+        <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition hover:text-foreground">
+          <ArrowLeft className="size-4" />{c.home}
+        </Link>
+        <div className="flex items-center gap-3">
+          <LanguageSwitcher compact />
+          <Link href="/" aria-label={c.home} className="flex items-center">
+            <img src="/Pexiloq_Logo.png" alt="Pexiloq" width={1774} height={887} className="h-10 w-auto object-contain sm:h-12" />
+          </Link>
+        </div>
+      </div>
+      <div className="mx-auto grid max-w-6xl items-center gap-12 py-12 lg:grid-cols-[0.85fr_1fr] lg:py-16">
+        <div className="hidden rounded-[2.5rem] border bg-card p-12 shadow-xs lg:block">
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground/80">pexiloq / {mode}</p>
+          <p className="mt-20 max-w-sm text-3xl font-medium leading-snug tracking-[-0.05em]">{mode === 'login' ? c.loginBody : c.signupBody}</p>
+          <div className="mt-16 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            <Globe2 className="size-4" />pexiloq.vercel.app
+          </div>
+        </div>
+        <div className="mx-auto w-full max-w-md">
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground/80">{mode === 'login' ? c.loginKicker : c.signupKicker}</p>
+          <h1 className="mt-2 text-3xl font-medium tracking-[-0.06em] sm:text-4xl">{mode === 'login' ? c.login : c.signup}</h1>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{mode === 'login' ? c.loginBody : c.signupBody}</p>
+          <div className="mt-8">
+            <button
+              type="button"
+              onClick={() => oauth()}
+              disabled={busy}
+              className="flex w-full items-center justify-center gap-3 rounded-2xl border bg-card px-4 py-3.5 text-sm font-medium shadow-xs transition hover:border-foreground/30 hover:bg-secondary/40 disabled:opacity-50"
+            >
+              <GoogleIcon />
+              <span>{busy ? c.wait : c.google}</span>
+            </button>
+          </div>
+          <div className="relative my-6 text-center text-xs">
+            <div className="absolute inset-0 flex items-center" aria-hidden="true"><div className="w-full border-t border-border" /></div>
+            <span className="relative bg-background px-3 font-medium text-muted-foreground">{c.or}</span>
+          </div>
+          <form onSubmit={submit} className="space-y-4">
+            {mode === 'signup' && (
+              <label className="block text-xs font-semibold text-muted-foreground">
+                <span className="block mb-1.5">{c.name}</span>
+                <input
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full rounded-xl border bg-card px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-foreground/50 shadow-xs"
+                  placeholder={c.namePlaceholder}
+                />
+              </label>
+            )}
+            <label className="block text-xs font-semibold text-muted-foreground">
+              <span className="block mb-1.5">{c.email}</span>
+              <input
+                required
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-xl border bg-card px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-foreground/50 shadow-xs"
+                placeholder={c.emailPlaceholder}
+              />
+            </label>
+            <label className="block text-xs font-semibold text-muted-foreground">
+              <span className="block mb-1.5">{c.password}</span>
+              <input
+                required
+                minLength={6}
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full rounded-xl border bg-card px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-foreground/50 shadow-xs"
+                placeholder={c.passwordPlaceholder}
+              />
+            </label>
+            {mode === 'signup' && (
+              <label className="flex items-start gap-3 rounded-xl border bg-secondary/40 p-3.5 text-xs leading-relaxed text-muted-foreground">
+                <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} className="mt-0.5 size-4 accent-primary rounded-sm" />
+                <span>
+                  {c.agree}{' '}
+                  <button type="button" onClick={() => setLegal('terms')} className="font-medium text-foreground underline underline-offset-2">
+                    {c.terms}
+                  </button>{' '}
+                  {c.and}{' '}
+                  <button type="button" onClick={() => setLegal('privacy')} className="font-medium text-foreground underline underline-offset-2">
+                    {c.privacy}
+                  </button>.
+                </span>
+              </label>
+            )}
+            {error && <p role="alert" className="rounded-xl bg-destructive/10 px-4 py-3 text-xs font-medium text-destructive">{error}</p>}
+            <button
+              disabled={busy}
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-3.5 text-sm font-medium text-primary-foreground shadow-xs transition hover:opacity-90 disabled:opacity-50"
+            >
+              {busy ? <><Loader2 className="size-4 animate-spin" />{c.wait}</> : mode === 'login' ? c.submitLogin : c.submitSignup}
+              {!busy && <ArrowUpRight className="size-4" />}
+            </button>
+          </form>
+          <p className="mt-8 text-center text-xs text-muted-foreground">
+            {mode === 'login' ? c.newHere : c.already}{' '}
+            <Link className="font-medium text-foreground underline underline-offset-4" href={mode === 'login' ? '/signup' : '/login'}>
+              {mode === 'login' ? c.signupLink : c.loginLink}
+            </Link>
+          </p>
+        </div>
+      </div>
+      {legal && <LegalDialog kind={legal} onClose={() => setLegal(null)} />}
+    </main>
+  )
 }

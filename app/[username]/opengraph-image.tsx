@@ -39,6 +39,9 @@ export default async function OpengraphImage({ params }: { params: Promise<{ use
   const headline = meta?.headline?.trim() || meta?.bio?.trim() || ''
   const accent = meta?.accentColor || BRAND_INK
   const cover = meta?.coverImageURL || ''
+  const coverFit = meta?.coverImageFit || 'cover'
+  const coverPositionX = typeof meta?.coverImagePositionX === 'number' ? meta.coverImagePositionX : 50
+  const coverPositionY = typeof meta?.coverImagePositionY === 'number' ? meta.coverImagePositionY : 50
   const avatar = meta?.showAvatar === false ? '' : meta?.photoURL || ''
   const avatarRadius = meta?.avatarShape === 'square' ? '0' : meta?.avatarShape === 'rounded' ? '40px' : '9999px'
 
@@ -57,7 +60,7 @@ export default async function OpengraphImage({ params }: { params: Promise<{ use
       >
         {cover ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={cover} alt="" width={1200} height={630} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src={cover} alt="" width={1200} height={630} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: coverFit, objectPosition: `${coverPositionX}% ${coverPositionY}%` }} />
         ) : (
           <div
             style={{

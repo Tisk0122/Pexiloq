@@ -13,6 +13,9 @@ export type PublicProfileMeta = {
   bio?: string
   photoURL?: string
   coverImageURL?: string
+  coverImageFit?: 'cover' | 'contain' | 'fill'
+  coverImagePositionX?: number
+  coverImagePositionY?: number
   accentColor?: string
   avatarShape?: 'circle' | 'rounded' | 'square'
   showAvatar?: boolean
@@ -54,6 +57,9 @@ export const loadPublicProfileMeta = (() => {
             bio: data.bio as string | undefined,
             photoURL: data.photoURL as string | undefined,
             coverImageURL: data.coverImageURL as string | undefined,
+            coverImageFit: data.coverImageFit as PublicProfileMeta['coverImageFit'],
+            coverImagePositionX: data.coverImagePositionX as number | undefined,
+            coverImagePositionY: data.coverImagePositionY as number | undefined,
             accentColor: data.accentColor as string | undefined,
             avatarShape: data.avatarShape as PublicProfileMeta['avatarShape'],
             showAvatar: data.showAvatar as boolean | undefined,

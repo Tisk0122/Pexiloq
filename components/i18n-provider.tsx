@@ -80,6 +80,9 @@ const en: Dictionary = {
   backgroundAnimated: 'Animate gradient', backgroundOverlay: 'Image overlay darkness',
   patternColor: 'Pattern color', patternDensity: 'Pattern density',
   cropHint: 'Drag to reposition, use the slider to zoom.', cropZoom: 'Zoom', cropApply: 'Apply', removeImage: 'Remove image',
+  aspectFree: 'Free', coverImageHeight: 'Cover image height', coverImageFit: 'Fit mode',
+  coverFitCover: 'Cover', coverFitContain: 'Contain', coverFitFill: 'Fill',
+  coverImagePositionX: 'Horizontal focus position', coverImagePositionY: 'Vertical focus position',
 }
 
 const translations: Record<Language, Dictionary> = {
@@ -153,6 +156,9 @@ const translations: Record<Language, Dictionary> = {
     backgroundAnimated: 'グラデーションをアニメーション', backgroundOverlay: '画像の暗さオーバーレイ',
     patternColor: 'パターンの色', patternDensity: 'パターンの密度',
     cropHint: 'ドラッグして位置を調整し、スライダーでズームできます。', cropZoom: 'ズーム', cropApply: '適用', removeImage: '画像を削除',
+    aspectFree: 'フリー', coverImageHeight: 'カバー画像の高さ', coverImageFit: '表示モード',
+    coverFitCover: 'カバー（トリミング）', coverFitContain: '全体表示', coverFitFill: '引き伸ばし',
+    coverImagePositionX: '水平位置（フォーカス）', coverImagePositionY: '垂直位置（フォーカス）',
   },
   zh: {
     ...en, language: '语言', home: '首页', features: '功能', howItWorks: '使用方法', explore: '探索个人主页', login: '登录', create: '创建 Pexiloq',
@@ -222,6 +228,10 @@ const translations: Record<Language, Dictionary> = {
     avatarAnimation: '头像动画', avatarAnimNone: '无', avatarAnimPulse: '脉动', avatarAnimSpin: '旋转', avatarAnimGlow: '发光',
     backgroundAnimated: '渐变动画', backgroundOverlay: '图片遮罩深浅',
     patternColor: '图案颜色', patternDensity: '图案密度',
+    cropHint: '拖动以调整位置，使用滑块缩放。', cropZoom: '缩放', cropApply: '应用', removeImage: '移除图片',
+    aspectFree: '自由', coverImageHeight: '封面图片高度', coverImageFit: '显示模式',
+    coverFitCover: '裁剪填满', coverFitContain: '完整显示', coverFitFill: '拉伸填充',
+    coverImagePositionX: '水平对焦位置', coverImagePositionY: '垂直对焦位置',
   },
   ko: {
     ...en, language: '언어', home: '홈', features: '기능', howItWorks: '사용 방법', explore: '프로필 둘러보기', login: '로그인', create: 'Pexiloq 만들기',
@@ -291,6 +301,10 @@ const translations: Record<Language, Dictionary> = {
     avatarAnimation: '아바타 애니메이션', avatarAnimNone: '없음', avatarAnimPulse: '펄스', avatarAnimSpin: '회전', avatarAnimGlow: '글로우',
     backgroundAnimated: '그라데이션 애니메이션', backgroundOverlay: '이미지 오버레이 어둡기',
     patternColor: '패턴 색상', patternDensity: '패턴 밀도',
+    cropHint: '드래그하여 위치를 조정하고, 슬라이더로 확대/축소하세요.', cropZoom: '확대/축소', cropApply: '적용', removeImage: '이미지 제거',
+    aspectFree: '자유', coverImageHeight: '커버 이미지 높이', coverImageFit: '표시 모드',
+    coverFitCover: '채우기(자르기)', coverFitContain: '전체 표시', coverFitFill: '늘려서 채우기',
+    coverImagePositionX: '수평 초점 위치', coverImagePositionY: '수직 초점 위치',
   },
   es: {
     ...en, language: 'Idioma', home: 'Inicio', features: 'Funciones', howItWorks: 'Cómo funciona', explore: 'Explorar perfiles', login: 'Iniciar sesión', create: 'Crea tu Pexiloq',
@@ -360,6 +374,10 @@ const translations: Record<Language, Dictionary> = {
     avatarAnimation: 'Animación del avatar', avatarAnimNone: 'Ninguna', avatarAnimPulse: 'Pulso', avatarAnimSpin: 'Girar', avatarAnimGlow: 'Brillo',
     backgroundAnimated: 'Animar degradado', backgroundOverlay: 'Oscuridad de la superposición',
     patternColor: 'Color del patrón', patternDensity: 'Densidad del patrón',
+    cropHint: 'Arrastra para reposicionar, usa el control deslizante para hacer zoom.', cropZoom: 'Zoom', cropApply: 'Aplicar', removeImage: 'Quitar imagen',
+    aspectFree: 'Libre', coverImageHeight: 'Altura de la imagen de portada', coverImageFit: 'Modo de ajuste',
+    coverFitCover: 'Cubrir', coverFitContain: 'Contener', coverFitFill: 'Rellenar',
+    coverImagePositionX: 'Posición de enfoque horizontal', coverImagePositionY: 'Posición de enfoque vertical',
   },
   fr: {
     ...en, language: 'Langue', home: 'Accueil', features: 'Fonctionnalités', howItWorks: 'Comment ça marche', explore: 'Explorer les profils', login: 'Se connecter', create: 'Créer votre Pexiloq',
@@ -429,6 +447,10 @@ const translations: Record<Language, Dictionary> = {
     avatarAnimation: 'Animation de l’avatar', avatarAnimNone: 'Aucune', avatarAnimPulse: 'Pulsation', avatarAnimSpin: 'Rotation', avatarAnimGlow: 'Lueur',
     backgroundAnimated: 'Animer le dégradé', backgroundOverlay: 'Assombrissement de la superposition',
     patternColor: 'Couleur du motif', patternDensity: 'Densité du motif',
+    cropHint: 'Glissez pour repositionner, utilisez le curseur pour zoomer.', cropZoom: 'Zoom', cropApply: 'Appliquer', removeImage: "Supprimer l'image",
+    aspectFree: 'Libre', coverImageHeight: 'Hauteur de l\u2019image de couverture', coverImageFit: 'Mode d\u2019ajustement',
+    coverFitCover: 'Remplir (recadrer)', coverFitContain: 'Contenir', coverFitFill: 'Étirer',
+    coverImagePositionX: 'Position de mise au point horizontale', coverImagePositionY: 'Position de mise au point verticale',
   },
   de: {
     ...en, language: 'Sprache', home: 'Startseite', features: 'Funktionen', howItWorks: 'So funktioniert es', explore: 'Profile entdecken', login: 'Anmelden', create: 'Pexiloq erstellen',
@@ -498,6 +520,10 @@ const translations: Record<Language, Dictionary> = {
     avatarAnimation: 'Avatar-Animation', avatarAnimNone: 'Keine', avatarAnimPulse: 'Pulsieren', avatarAnimSpin: 'Drehen', avatarAnimGlow: 'Leuchten',
     backgroundAnimated: 'Verlauf animieren', backgroundOverlay: 'Dunkelheit der Bildüberlagerung',
     patternColor: 'Musterfarbe', patternDensity: 'Musterdichte',
+    cropHint: 'Ziehen zum Verschieben, Schieberegler zum Zoomen verwenden.', cropZoom: 'Zoom', cropApply: 'Übernehmen', removeImage: 'Bild entfernen',
+    aspectFree: 'Frei', coverImageHeight: 'Höhe des Titelbilds', coverImageFit: 'Anpassungsmodus',
+    coverFitCover: 'Ausfüllen (zuschneiden)', coverFitContain: 'Vollständig anzeigen', coverFitFill: 'Strecken',
+    coverImagePositionX: 'Horizontale Fokusposition', coverImagePositionY: 'Vertikale Fokusposition',
   },
   pt: {
     ...en, language: 'Idioma', home: 'Início', features: 'Recursos', howItWorks: 'Como funciona', explore: 'Explorar perfis', login: 'Entrar', create: 'Criar seu Pexiloq',
@@ -567,6 +593,10 @@ const translations: Record<Language, Dictionary> = {
     avatarAnimation: 'Animação do avatar', avatarAnimNone: 'Nenhuma', avatarAnimPulse: 'Pulso', avatarAnimSpin: 'Girar', avatarAnimGlow: 'Brilho',
     backgroundAnimated: 'Animar gradiente', backgroundOverlay: 'Escurecimento da sobreposição',
     patternColor: 'Cor do padrão', patternDensity: 'Densidade do padrão',
+    cropHint: 'Arraste para reposicionar, use o controle deslizante para dar zoom.', cropZoom: 'Zoom', cropApply: 'Aplicar', removeImage: 'Remover imagem',
+    aspectFree: 'Livre', coverImageHeight: 'Altura da imagem de capa', coverImageFit: 'Modo de ajuste',
+    coverFitCover: 'Preencher (cortar)', coverFitContain: 'Conter', coverFitFill: 'Esticar',
+    coverImagePositionX: 'Posição de foco horizontal', coverImagePositionY: 'Posição de foco vertical',
   },
   hi: {
     ...en, language: 'भाषा', home: 'होम', features: 'विशेषताएँ', howItWorks: 'यह कैसे काम करता है', explore: 'प्रोफ़ाइल देखें', login: 'लॉग इन', create: 'अपना Pexiloq बनाएं',
@@ -636,6 +666,10 @@ const translations: Record<Language, Dictionary> = {
     avatarAnimation: 'अवतार एनिमेशन', avatarAnimNone: 'कोई नहीं', avatarAnimPulse: 'पल्स', avatarAnimSpin: 'घूर्णन', avatarAnimGlow: 'चमक',
     backgroundAnimated: 'ग्रेडिएंट एनिमेट करें', backgroundOverlay: 'इमेज ओवरले की गहराई',
     patternColor: 'पैटर्न रंग', patternDensity: 'पैटर्न घनत्व',
+    cropHint: 'स्थिति बदलने के लिए खींचें, ज़ूम के लिए स्लाइडर का उपयोग करें।', cropZoom: 'ज़ूम', cropApply: 'लागू करें', removeImage: 'छवि हटाएं',
+    aspectFree: 'फ्री', coverImageHeight: 'कवर इमेज की ऊंचाई', coverImageFit: 'फ़िट मोड',
+    coverFitCover: 'कवर (क्रॉप)', coverFitContain: 'पूरा दिखाएं', coverFitFill: 'खींचकर भरें',
+    coverImagePositionX: 'क्षैतिज फोकस स्थिति', coverImagePositionY: 'ऊर्ध्वाधर फोकस स्थिति',
   },
 }
 
