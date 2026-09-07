@@ -64,8 +64,29 @@ async function safeImageDataUri(url: string | undefined | null): Promise<string 
 // exactly the corrupted-looking glyph that used to show up in profile
 // headlines. Pexiloq supports nine languages and free-form display
 // names/headlines, so we detect which scripts actually appear in this
-// profile's text and load real fonts to cover them, subsetted to just the
-// characters used (via the `text` param) to keep each request tiny.
+// profile's text and load a matching font to cover them.
+//
+// These fonts used to be downloaded from Google Fonts on every cold request
+// (CSS lookup, then the actual font file — two chained network calls, each
+// with its own timeout). That round trip to a third-party host was the real
+// cause of missing OG image previews on Discord/Slack/etc: even when every
+// individual fetch "degraded gracefully" on failure, the *combined* latency
+// of a Firestore read plus multiple sequential font/image fetches routinely
+// pushed total response time past what link-unfurling crawlers wait for
+// (Discord's embed fetcher gives up in well under 5 seconds), so the crawler
+// simply gave up and showed no image at all — with nothing logged as an
+// error on our side, because nothing actually threw.
+//
+// Fonts are static assets that don't change per-request, so there's no
+// reason to fetch them over the network at all: they're bundled directly
+// into the deployment and read from local disk, which takes single-digit
+// milliseconds instead of seconds and has no external failure mode.
+const SCRIPT_FONT_FILE: Record<string, string> = {
+  ja: 'NotoSansJP-SemiBold.ttf',
+  ko: 'NotoSansKR-SemiBold.ttf',
+  zh: 'NotoSansSC-SemiBold.ttf',
+  hi: 'NotoSansDevanagari-SemiBold.ttf',
+}
 const SCRIPT_FONT_FAMILY: Record<string, string> = {
   ja: 'Noto Sans JP',
   ko: 'Noto Sans KR',
@@ -83,96 +104,44 @@ function detectScripts(text: string): string[] {
   return scripts
 }
 
-// Google Fonts serves woff/woff2 by default to modern browsers. Satori only
-// supports ttf/otf. An older Safari User-Agent reliably forces Google Fonts to
-// return format('truetype') font files.
-const LEGACY_UA = 'Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_8; de-at) AppleWebKit/533.21.1 (KHTML, like Gecko) Version/5.0.5 Safari/533.21.1'
+type FontEntry = { name: string; data: Buffer; weight: 600; style: 'normal' }
 
-// A plain fetch() in Node has NO timeout by default. A dynamic OG image route
-// that hangs waiting on a third-party font host (blocked egress, slow DNS,
-// Google Fonts having a bad moment) will stall until the platform's own
-// function timeout kills it — which looks to the requester (Discord, Slack,
-// Twitter…) exactly like the image failed to load, because it never got a
-// response in time. Every network call in this file is bounded so a slow or
-// unreachable font host degrades to "render without that font" instead of
-// taking the whole preview down with it.
-async function fetchWithTimeout(url: string, ms: number, init?: RequestInit): Promise<Response | null> {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), ms)
-  try {
-    const res = await fetch(url, { ...init, signal: controller.signal })
-    return res.ok ? res : null
-  } catch {
-    return null
-  } finally {
-    clearTimeout(timeout)
-  }
-}
+const FONTS_DIR = path.join(process.cwd(), 'assets', 'fonts')
 
-async function loadGoogleFont(family: string, text: string): Promise<ArrayBuffer | null> {
-  try {
-    const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@600&text=${encodeURIComponent(text)}`
-    const cssRes = await fetchWithTimeout(cssUrl, 1500, { headers: { 'User-Agent': LEGACY_UA } })
-    const css = cssRes ? await cssRes.text() : null
-    if (!css) return null
-    const fontUrl = css.match(/url\(([^)]+)\)\s*format\('truetype'\)/)?.[1] ?? css.match(/url\(([^)]+)\)/)?.[1]
-    if (!fontUrl) return null
-    const fontRes = await fetchWithTimeout(fontUrl, 1500)
-    if (!fontRes) return null
-    return await fontRes.arrayBuffer()
-  } catch {
-    return null
-  }
-}
-
-type FontEntry = { name: string; data: ArrayBuffer; weight: 600; style: 'normal' }
-
-// Fonts don't depend on request data beyond which scripts a profile's text
-// happens to use, and this module stays warm across requests on the same
-// serverless instance — so cache each family's bytes in memory the first
-// time it's needed instead of re-downloading it on every single OG image
-// request for that instance's lifetime.
+// Local disk reads are fast and reliable, but the file is still read once per
+// cold serverless instance rather than per-request: the module stays warm
+// across requests on the same instance, so cache each family's bytes in
+// memory the first time it's needed.
 const fontCache = new Map<string, Promise<FontEntry | null>>()
 
-function getFont(family: string, text: string): Promise<FontEntry | null> {
-  // Sort and deduplicate characters in `text` to maximize cache hits while
-  // ensuring every required glyph is included in the Google Fonts subset.
-  const uniqueChars = Array.from(new Set(text)).sort().join('')
-  const cacheKey = `${family}:${uniqueChars}`
-  const cached = fontCache.get(cacheKey)
+function getFont(family: string, filename: string): Promise<FontEntry | null> {
+  const cached = fontCache.get(family)
   if (cached) return cached
-  const promise = loadGoogleFont(family, uniqueChars).then((data) => (data ? { name: family, data, weight: 600 as const, style: 'normal' as const } : null))
-  fontCache.set(cacheKey, promise)
+  const promise = readFile(path.join(FONTS_DIR, filename))
+    .then((data) => ({ name: family, data, weight: 600 as const, style: 'normal' as const }))
+    .catch(() => null)
+  fontCache.set(family, promise)
   return promise
 }
 
-// Belt-and-suspenders: even with per-fetch timeouts above, cap the *entire*
-// font-loading step so nothing about it can ever meaningfully delay the
-// image response — worst case we just render with the families that made it
-// back in time and fall back to the default font for the rest.
-async function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
-  return Promise.race([promise, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))])
-}
-
 async function loadFonts(text: string): Promise<{ fonts: FontEntry[]; families: string[] }> {
-  const families = ['Noto Sans', ...detectScripts(text).map((script) => SCRIPT_FONT_FAMILY[script])]
-  const fonts = await withTimeout(
-    Promise.all(families.map((family) => getFont(family, text))).then((list) => list.filter((f): f is FontEntry => f !== null)),
-    1800,
-    []
-  )
+  const scripts = detectScripts(text)
+  const entries = await Promise.all([
+    getFont('Noto Sans', 'NotoSans-SemiBold.ttf'),
+    ...scripts.map((script) => getFont(SCRIPT_FONT_FAMILY[script], SCRIPT_FONT_FILE[script])),
+  ])
+  const fonts = entries.filter((f): f is FontEntry => f !== null)
+  const families = ['Noto Sans', ...scripts.map((script) => SCRIPT_FONT_FAMILY[script])]
   return { fonts, families }
 }
 
-// Hard ceiling on the whole data-gathering phase (profile lookup + cover/avatar
-// fetch + font loading). Individual steps already have their own timeouts, but
-// nothing previously bounded their *sum* — Firestore could take up to 4s and the
-// font/image fetches up to another ~4s after it, so a route that "degraded
-// gracefully" at every step could still take ~8s end to end. Social-media link
-// crawlers (Discord, Slack, Twitter/X) generally give up well before that and
-// show no preview image at all, which is what was happening here even though no
-// individual request ever actually failed. Capping the combined phase keeps the
-// whole route comfortably inside what crawlers and the hosting platform allow.
+// Hard ceiling on the whole data-gathering phase. Font loading is now a fast,
+// reliable local disk read (see above), but the Firestore profile lookup and
+// the user-supplied avatar/cover image URLs are still genuine network calls
+// that can hang or run slow — this keeps their combined worst case bounded
+// well inside what link-unfurling crawlers and the hosting platform allow,
+// instead of two independent budgets that could previously add up to several
+// seconds each.
 async function withOverallTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
   return Promise.race([promise, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))])
 }
@@ -192,15 +161,20 @@ export default async function OpengraphImage({ params }: { params: Promise<{ use
 
   const allText = `${displayName} @${username} ${headline} pexiloq.vercel.app ${initials}`
 
-  const [logo, cover, avatar, { fonts, families }] = await withOverallTimeout(
+  // Fonts are a local disk read (fast, no external failure mode) so they're
+  // awaited on their own rather than racing against the network-bound image
+  // fetches below — there's no reason to ever fall back to the "no fonts"
+  // case just because a user's avatar host was slow.
+  const { fonts, families } = await loadFonts(allText)
+
+  const [logo, cover, avatar] = await withOverallTimeout(
     Promise.all([
       logoDataUri(),
       safeImageDataUri(meta?.coverImageURL),
       safeImageDataUri(meta?.showAvatar === false ? null : meta?.photoURL),
-      loadFonts(allText),
     ]),
     2200,
-    [null, null, null, { fonts: [], families: ['Noto Sans'] }] as [string | null, string | null, string | null, { fonts: FontEntry[]; families: string[] }]
+    [null, null, null] as [string | null, string | null, string | null]
   )
 
   const fontFamilyStack = [...families, 'sans-serif'].join(', ')
