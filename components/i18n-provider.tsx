@@ -1,7 +1,9 @@
 'use client'
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { Check, ChevronDown, Globe2 } from 'lucide-react'
+import { siteName } from '@/lib/site'
 
 export const languages = { en: 'English', ja: '日本語', zh: '简体中文', ko: '한국어', es: 'Español', fr: 'Français', de: 'Deutsch', pt: 'Português', hi: 'हिन्दी' } as const
 export type Language = keyof typeof languages
@@ -718,6 +720,14 @@ export function I18nProvider({ children, serverLanguage }: { children: React.Rea
 
 export function useI18n() { return useContext(Context) }
 
+// Server-safe lookup used by generateMetadata() in app/layout.tsx so the very
+// first HTML response — before any client JS runs — already carries the tab
+// title in the visitor's resolved language, matching what TranslationMeta
+// keeps it in sync with afterwards.
+export function getLocalizedTagline(language: Language): string {
+  return translations[language]?.heroTitle ?? en.heroTitle
+}
+
 export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const { language, setLanguage, t } = useI18n(); const [open, setOpen] = useState(false); const ref = useRef<HTMLDivElement>(null)
   useEffect(() => { const close = (event: MouseEvent) => { if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false) }; document.addEventListener('mousedown', close); return () => document.removeEventListener('mousedown', close) }, [])
@@ -725,5 +735,41 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   return <div ref={ref} className="relative"><button type="button" aria-haspopup="listbox" aria-expanded={open} aria-label={t('language')} onClick={() => setOpen((value) => !value)} className={`group inline-flex items-center gap-2 rounded-full border border-border/80 bg-background/80 px-3 py-2 text-xs font-medium text-muted-foreground shadow-sm transition hover:border-foreground/30 hover:text-foreground ${compact ? 'px-2.5' : ''}`}><Globe2 className="size-3.5" /><span className={compact ? 'sr-only' : ''}>{languages[language]}</span><ChevronDown className={`size-3.5 transition-transform ${open ? 'rotate-180' : ''}`} /></button>{open && <div role="listbox" aria-label={t('language')} className="absolute right-0 z-50 mt-2 min-w-44 overflow-hidden rounded-2xl border border-border bg-popover p-1.5 text-popover-foreground shadow-[0_16px_45px_rgba(20,20,18,0.16)]"><div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t('language')}</div>{Object.entries(languages).map(([code, label]) => <button type="button" role="option" aria-selected={language === code} key={code} onClick={() => { setLanguage(code as Language); setOpen(false) }} className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition hover:bg-accent hover:text-accent-foreground"><span>{label}</span>{language === code && <Check className="size-4" />}</button>)}</div>}</div>
 }
 
-export function TranslationMeta() { const { language } = useI18n(); useEffect(() => { document.documentElement.lang = language }, [language]); return null }
+// Route -> translation-key mapping for the browser tab title. Every entry here
+// is a *label*; the actual <title> is `${label} · Pexiloq` (or, for the home
+// page, the full localized tagline) so it always matches the current
+// language — including right after the user switches languages, with no
+// reload. Checked longest-prefix-first so `/dashboard/links` doesn't match
+// the generic `/dashboard` entry.
+const TAB_TITLE_ROUTES: [prefix: string, key: string][] = [
+  ['/dashboard/profile', 'profile'],
+  ['/dashboard/links', 'links'],
+  ['/dashboard/projects', 'projects'],
+  ['/dashboard/appearance', 'appearance'],
+  ['/dashboard/settings', 'settings'],
+  ['/dashboard', 'workspace'],
+  ['/login', 'login'],
+  ['/signup', 'createAccount'],
+  ['/terms', 'terms'],
+  ['/privacy', 'privacy'],
+]
+
+export function TranslationMeta() {
+  const { language, t } = useI18n()
+  const pathname = usePathname()
+  useEffect(() => { document.documentElement.lang = language }, [language])
+  useEffect(() => {
+    // Routes with their own server-rendered title (currently just the public
+    // `/[username]` profile pages, which title themselves after the profile
+    // owner's actual name) manage document.title on their own — updating it
+    // here on every language switch would stomp that with the generic site
+    // title, so leave anything that isn't a known static route alone.
+    const isKnownRoute = pathname === '/' || TAB_TITLE_ROUTES.some(([prefix]) => pathname.startsWith(prefix))
+    if (!isKnownRoute) return
+
+    const match = TAB_TITLE_ROUTES.find(([prefix]) => pathname.startsWith(prefix))
+    document.title = match ? `${t(match[1])} · ${siteName}` : `${siteName} — ${t('heroTitle')}`
+  }, [language, t, pathname])
+  return null
+}
 export { languages as supportedLanguages }

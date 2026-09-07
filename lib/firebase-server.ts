@@ -5,6 +5,16 @@
 // allow anonymous reads of the `users` collection.
 import { firebaseApp, firebaseEnabled } from '@/lib/firebase-app'
 
+// A hung or slow Firestore read has no built-in timeout, and this data feeds
+// both page metadata and the dynamic OG image — a stall here looks to a
+// social-media crawler exactly like the whole preview failed to generate.
+// Bounding it means a slow backend degrades to "no profile data" (existing
+// callers already treat that as a safe not-found case) instead of hanging
+// the response.
+async function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([promise, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))])
+}
+
 export type PublicProfileMeta = {
   uid?: string
   username: string
@@ -45,8 +55,8 @@ export const loadPublicProfileMeta = (() => {
       const firestore = await getDb()
       if (firestore) {
         const { collection, query, where, limit, getDocs } = await import('firebase/firestore')
-        const snap = await getDocs(query(collection(firestore, 'users'), where('username', '==', username), limit(1)))
-        const doc = snap.docs[0]
+        const snap = await withTimeout(getDocs(query(collection(firestore, 'users'), where('username', '==', username), limit(1))), 4000, null)
+        const doc = snap?.docs[0]
         if (doc) {
           const data = doc.data() as Record<string, unknown>
           result = {

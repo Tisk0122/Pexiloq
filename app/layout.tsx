@@ -2,7 +2,7 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { cookies, headers } from 'next/headers'
 import './globals.css'
-import { I18nProvider, TranslationMeta, supportedLanguages, type Language } from '@/components/i18n-provider'
+import { I18nProvider, TranslationMeta, supportedLanguages, getLocalizedTagline, type Language } from '@/components/i18n-provider'
 import { WorkspaceProvider } from '@/components/pexiloq-app'
 import { Noto_Sans_JP } from 'next/font/google'
 import { defaultDescription, defaultOgImage, defaultTitle, siteName, siteUrl } from '@/lib/site'
@@ -15,9 +15,15 @@ const ogLocales: Record<Language, string> = {
 
 export async function generateMetadata(): Promise<Metadata> {
   const language = await resolveServerLanguage()
+  // defaultTitle/defaultDescription stay as the English fallback used for
+  // metadataBase-relative tooling and as the `en` case; every other supported
+  // language gets its tab title from the same dictionary the client-side
+  // language switcher uses, so the very first response already matches the
+  // visitor's language instead of flashing English before hydration.
+  const localizedTitle = language === 'en' ? defaultTitle : `${siteName} — ${getLocalizedTagline(language)}`
   return {
     metadataBase: new URL(siteUrl),
-    title: { default: defaultTitle, template: `%s · ${siteName}` },
+    title: { default: localizedTitle, template: `%s · ${siteName}` },
     description: defaultDescription,
     applicationName: siteName,
     generator: 'Pexiloq',
@@ -33,14 +39,14 @@ export async function generateMetadata(): Promise<Metadata> {
       type: 'website',
       url: '/',
       siteName,
-      title: defaultTitle,
+      title: localizedTitle,
       description: defaultDescription,
       images: [{ url: defaultOgImage, width: 1200, height: 630, alt: siteName }],
       locale: ogLocales[language] || 'en_US',
     },
     twitter: {
       card: 'summary_large_image',
-      title: defaultTitle,
+      title: localizedTitle,
       description: defaultDescription,
       images: [defaultOgImage],
     },
