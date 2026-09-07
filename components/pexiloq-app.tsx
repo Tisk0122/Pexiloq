@@ -168,7 +168,7 @@ type TemplateBundle = { profile: Profile; links: LinkItem[]; projects: Project[]
 function makeTemplate(headline: string, bio: string, links: [string, string, string], projects: { title: string; description: string; tech: [string, string] }[]): TemplateBundle {
   const urls = ['https://medium.com', 'https://youtube.com', 'https://instagram.com']
   return {
-    profile: { username: 'amira', displayName: 'Amira Moss', headline, bio, photoURL: '', website: 'https://pexiloq.com', accentColor: '#171717', theme: 'light', buttonStyle: 'solid', cardRadius: '3xl', fontStyle: 'sans', backgroundStyle: 'default', backgroundImageURL: '', backgroundColor: '', backgroundGradient: '', backgroundPattern: 'dots', socials: {}, twitterIcon: 'x', avatarShape: 'circle', avatarRing: true, showAvatar: true, showBadge: true, showLinkIcons: true, cardShadow: true, spacing: 'cozy', socialStyle: 'outline', isPublic: true, onboarded: true, layoutTemplate: 'classic', sectionOrder: [...defaultSectionOrder], colorThemePack: 'custom', backgroundAnimated: false, backgroundOverlay: 0, backgroundPatternDensity: 1, backgroundPatternColor: '', coverImageURL: '', coverImageHeight: 140, coverImageFit: 'cover', coverImagePositionX: 50, coverImagePositionY: 50, showVerifiedBadge: false, avatarAnimation: 'none' },
+    profile: { username: 'amira', displayName: 'Amira Moss', headline, bio, photoURL: '', website: 'https://pexiloq.vercel.app', accentColor: '#171717', theme: 'light', buttonStyle: 'solid', cardRadius: '3xl', fontStyle: 'sans', backgroundStyle: 'default', backgroundImageURL: '', backgroundColor: '', backgroundGradient: '', backgroundPattern: 'dots', socials: {}, twitterIcon: 'x', avatarShape: 'circle', avatarRing: true, showAvatar: true, showBadge: true, showLinkIcons: true, cardShadow: true, spacing: 'cozy', socialStyle: 'outline', isPublic: true, onboarded: true, layoutTemplate: 'classic', sectionOrder: [...defaultSectionOrder], colorThemePack: 'custom', backgroundAnimated: false, backgroundOverlay: 0, backgroundPatternDensity: 1, backgroundPatternColor: '', coverImageURL: '', coverImageHeight: 140, coverImageFit: 'cover', coverImagePositionX: 50, coverImagePositionY: 50, showVerifiedBadge: false, avatarAnimation: 'none' },
     links: links.map((title, i) => ({ id: String(i + 1), title, url: urls[i], visible: true })),
     projects: projects.map((p, i) => ({ id: String(i + 1), title: p.title, description: p.description, url: 'https://example.com', imageURL: '', technologies: [...p.tech], visible: true })),
   }
@@ -211,7 +211,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           {profile.username && (
             <div className="hidden items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground md:flex">
               <span className="size-2 rounded-full" style={{ backgroundColor: profile.isPublic === false ? '#eab308' : '#22c55e' }} />
-              <span className="font-mono text-[11px]">pexiloq.com/{profile.username}</span>
+              <span className="font-mono text-[11px]">pexiloq.vercel.app/{profile.username}</span>
             </div>
           )}
         </div>
@@ -742,7 +742,7 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
       )}
       <div className="p-5">
       <div className={`flex flex-wrap items-center justify-between gap-x-2 gap-y-2 border-b pb-3 text-[10px] uppercase tracking-[0.18em] ${skin.bar} ${skin.sub}`}>
-        <span className="min-w-0 truncate py-1">pexiloq.com / {profile.username}</span>
+        <span className="min-w-0 truncate py-1">pexiloq.vercel.app / {profile.username}</span>
         <span className="flex shrink-0 items-center gap-1">
           <button onClick={() => setShowQr((v) => !v)} aria-label={t('showQr')} aria-pressed={showQr} className={`-my-1 rounded-full px-2.5 py-2 transition ${showQr ? 'bg-secondary/80' : 'hover:bg-secondary/50'}`}>{t('qr')}</button>
           <button onClick={share} aria-label={t('shareButton')} className="-my-1 flex items-center gap-1 rounded-full px-2.5 py-2 transition hover:bg-secondary/50">{copied ? <Check className="inline size-3" /> : <Copy className="inline size-3" />} {copied ? t('copied') : t('shareButton')}</button>
@@ -750,8 +750,8 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
       </div>
       {showQr && !preview && (
         <div className="flex flex-col items-center gap-3 border-b pb-6 pt-6 text-center">
-          <img src={qrCodeFor(`https://${typeof window !== 'undefined' ? window.location.host : 'pexiloq.com'}/${profile.username}`)} alt={t('qr')} width={160} height={160} className="rounded-xl border" />
-          <a href={qrCodeFor(`https://${typeof window !== 'undefined' ? window.location.host : 'pexiloq.com'}/${profile.username}`, 512)} download={`${profile.username}-pexiloq-qr.png`} target="_blank" rel="noreferrer" className="text-xs underline underline-offset-4" style={{ color: profile.accentColor }}>{t('downloadQr')}</a>
+          <img src={qrCodeFor(`https://${typeof window !== 'undefined' ? window.location.host : 'pexiloq.vercel.app'}/${profile.username}`)} alt={t('qr')} width={160} height={160} className="rounded-xl border" />
+          <a href={qrCodeFor(`https://${typeof window !== 'undefined' ? window.location.host : 'pexiloq.vercel.app'}/${profile.username}`, 512)} download={`${profile.username}-pexiloq-qr.png`} target="_blank" rel="noreferrer" className="text-xs underline underline-offset-4" style={{ color: profile.accentColor }}>{t('downloadQr')}</a>
         </div>
       )}
       <div className={`px-2 py-8 sm:px-8 ${isNameCard ? 'text-left sm:flex sm:items-start sm:gap-8' : 'text-center'} ${profile.coverImageURL ? '-mt-8' : ''}`}>
@@ -1018,7 +1018,7 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('stepBasics')}</p>
               <div className="mt-4 space-y-4">
                 <Field label={t('displayName')} value={draftProfile.displayName} onChange={(v) => setDraftProfile({ ...draftProfile, displayName: v })} placeholder="e.g. Amira Moss" />
-                <Field label={t('username')} value={draftProfile.username} onChange={(v) => setDraftProfile({ ...draftProfile, username: v.toLowerCase().replace(/[^a-z0-9-]/g, '') })} prefix="pexiloq.com/" placeholder="username" />
+                <Field label={t('username')} value={draftProfile.username} onChange={(v) => setDraftProfile({ ...draftProfile, username: v.toLowerCase().replace(/[^a-z0-9-]/g, '') })} prefix="pexiloq.vercel.app/" placeholder="username" />
               </div>
             </div>
 
@@ -1554,7 +1554,7 @@ function Onboarding() {
         {step === 0 && (
           <div className="mt-6 space-y-4">
             <Field label={t('displayName')} value={draft.displayName} onChange={(v) => setField({ displayName: v })} />
-            <Field label={t('username')} value={draft.username} prefix="pexiloq.com/" onChange={(v) => setField({ username: v.toLowerCase().replace(/[^a-z0-9-]/g, '') })} />
+            <Field label={t('username')} value={draft.username} prefix="pexiloq.vercel.app/" onChange={(v) => setField({ username: v.toLowerCase().replace(/[^a-z0-9-]/g, '') })} />
             <Field label={t('headline')} value={draft.headline} onChange={(v) => setField({ headline: v })} />
           </div>
         )}
@@ -2061,7 +2061,7 @@ function DesktopPreviewFrame({ profile, children }: { profile: Profile; children
   const { ref: contentRef, height: contentHeight } = useElementSize<HTMLDivElement>()
   const scale = screenWidth > 0 ? screenWidth / DESKTOP_CONTENT_WIDTH : 1
   const skin = profile.theme === 'dark' ? 'bg-[#20221f] text-[#f5f5f2]' : 'bg-background text-foreground'
-  const url = `pexiloq.com/${profile.username || ''}`
+  const url = `pexiloq.vercel.app/${profile.username || ''}`
   return (
     <div className="pexiloq-desktop-frame">
       <div className="pexiloq-desktop-shell">
@@ -2182,7 +2182,7 @@ export function SettingsPage() {
       <PageHeader eyebrow={t('accountLabel')} title={t('settings')} description={t('settingsDesc')} />
       <div className="max-w-2xl rounded-2xl border bg-card p-6">
         <p className="text-sm font-medium">{t('publicUrl')}</p>
-        <p className="mt-2 text-sm text-muted-foreground">pexiloq.com/{profile.username}</p>
+        <p className="mt-2 text-sm text-muted-foreground">pexiloq.vercel.app/{profile.username}</p>
         <div className="my-8 border-t" />
         <p className="text-sm font-medium">{t('stepPrivacy')}</p>
         <p className="mt-2 text-sm text-muted-foreground">{profile.isPublic === false ? t('privateProfileText') : t('publicProfileText')}</p>

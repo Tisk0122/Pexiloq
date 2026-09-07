@@ -70,7 +70,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
           <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground/80">pexiloq / {mode}</p>
           <p className="mt-20 max-w-sm text-3xl font-medium leading-snug tracking-[-0.05em]">{mode === 'login' ? c.loginBody : c.signupBody}</p>
           <div className="mt-16 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            <Globe2 className="size-4" />pexiloq.com
+            <Globe2 className="size-4" />pexiloq.vercel.app
           </div>
         </div>
         <div className="mx-auto w-full max-w-md">
