@@ -48,8 +48,19 @@ async function safeImageDataUri(url: string | undefined | null): Promise<string 
     const res = await fetch(url, { signal: controller.signal })
     clearTimeout(timeout)
     if (!res.ok) return null
-    const contentType = res.headers.get('content-type') || ''
-    if (!contentType.startsWith('image/')) return null
+    const contentType = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase()
+    // satori/resvg (the renderer behind ImageResponse) can only decode PNG,
+    // JPEG, GIF, and SVG. Anything else it's handed — WebP and BMP are the
+    // common real-world cases, since browsers/CDNs auto-convert uploads to
+    // WebP by default — throws deep inside its Rust image decoder *while
+    // the response body is being streamed*, not while ImageResponse is
+    // constructed. That means the route's own try/catch around
+    // `new ImageResponse(...)` never sees it: Next.js reports it as an
+    // opaque "failed to pipe response" / "is not iterable" error with no
+    // usable stack trace, and the request 500s. Filtering to formats we
+    // know satori can actually decode keeps an unsupported avatar/cover
+    // format a harmless "no image" fallback instead of a crash.
+    if (!['image/png', 'image/jpeg', 'image/gif', 'image/svg+xml'].includes(contentType)) return null
     const buffer = await res.arrayBuffer()
     if (buffer.byteLength === 0) return null
     return `data:${contentType};base64,${Buffer.from(buffer).toString('base64')}`
@@ -304,7 +315,18 @@ export default async function OpengraphImage({ params }: { params: Promise<{ use
   )
 
   try {
-    return new ImageResponse(image, { ...size, fonts: fonts.length ? fonts : undefined })
+    // ImageResponse's constructor never throws by itself — satori/resvg do
+    // their actual rendering lazily, while the response body is streamed
+    // out by Next.js. That means a decode/layout failure surfaces *after*
+    // this function has already returned, inside Next's own internal
+    // pipe-to-response code, completely outside any try/catch we write here
+    // — it shows up as an opaque "failed to pipe response" 500 with no
+    // usable stack trace on our side. Forcing full consumption of the body
+    // ourselves (via arrayBuffer()) moves that failure back inside this
+    // try/catch, so we can actually fall back instead of 500ing.
+    const rendered = new ImageResponse(image, { ...size, fonts: fonts.length ? fonts : undefined })
+    const bytes = await rendered.arrayBuffer()
+    return new Response(bytes, { headers: rendered.headers })
   } catch (err) {
     // Last-resort fallback: if rendering still fails for some unforeseen
     // reason, still return a valid, branded PNG instead of a 500 — a plain
