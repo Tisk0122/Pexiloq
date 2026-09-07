@@ -1012,7 +1012,7 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
         }
       />
       {kind === 'profile' && (
-        <div className="grid gap-8 lg:grid-cols-[1fr_0.75fr]">
+        <div className="grid gap-8 lg:grid-cols-[1fr_0.75fr] lg:items-start">
           <div className="space-y-6 rounded-2xl border bg-card p-6 shadow-xs">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('stepBasics')}</p>
@@ -1082,13 +1082,13 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
               </div>
             </div>
           </div>
-          <div><LivePreview profile={draftProfile} links={draftLinks} projects={draftProjects} /></div>
+          <div className="lg:sticky lg:top-20 lg:self-start"><LivePreview profile={draftProfile} links={draftLinks} projects={draftProjects} /></div>
         </div>
       )}
       {kind === 'appearance' && (
-        <div className="grid gap-8 lg:grid-cols-[1fr_0.75fr]">
-          <div className="rounded-2xl border bg-card p-6"><AppearanceControls draft={draftProfile} onChange={setDraftProfile} uid={uid} /></div>
-          <div><LivePreview profile={draftProfile} links={draftLinks} projects={draftProjects} /></div>
+        <div className="grid gap-8 lg:grid-cols-[1fr_0.75fr] lg:items-start">
+          <div className="rounded-2xl border bg-card p-6 shadow-xs"><AppearanceControls draft={draftProfile} onChange={setDraftProfile} uid={uid} /></div>
+          <div className="lg:sticky lg:top-20 lg:self-start"><LivePreview profile={draftProfile} links={draftLinks} projects={draftProjects} /></div>
         </div>
       )}
       {kind === 'links' && (
@@ -1618,7 +1618,7 @@ function Onboarding() {
       </div>
       {/* A live preview beside every step (not just the final privacy step) means the person
          sees their page take shape as they type, instead of filling out forms blind until the end. */}
-      {!isLast && <div className="hidden lg:block"><LivePreview profile={draft} links={draftLinks.filter((i) => i.visible)} projects={draftProjects.filter((i) => i.visible)} /></div>}
+      {!isLast && <div className="hidden lg:block lg:sticky lg:top-20 lg:self-start"><LivePreview profile={draft} links={draftLinks.filter((i) => i.visible)} projects={draftProjects.filter((i) => i.visible)} /></div>}
       </div>
     </div>
   )
