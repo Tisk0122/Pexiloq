@@ -28,25 +28,27 @@ export default function Page() {
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#f5f5f2] text-[#151515]">
-      <header className="mx-auto flex max-w-[1320px] items-center justify-between px-6 py-6 lg:px-10">
-        <Link href="#top" className="flex shrink-0 items-center" aria-label="Pexiloq home">
-          <img src="/Pexiloq_Logo.png" alt="Pexiloq" width={1774} height={887} className="h-14 w-auto object-contain sm:h-16 md:h-20 lg:h-24" />
-        </Link>
-        <nav className="hidden items-center gap-8 text-sm text-[#686864] md:flex">
-          <Link className="transition-colors hover:text-[#151515]" href="#features">{t('features')}</Link>
-          <Link className="transition-colors hover:text-[#151515]" href="#how-it-works">{t('howItWorks')}</Link>
-          <Link className="transition-colors hover:text-[#151515]" href="#profiles">{t('explore')}</Link>
-        </nav>
-        <div className="hidden items-center gap-5 md:flex">
-          <LanguageSwitcher compact />
-          {authLoading ? <div className="h-11 w-24 animate-pulse rounded-full bg-[#e2e2db]" /> : user ? (
-            <Link href="/dashboard" className="flex items-center gap-2 rounded-full bg-[#171717] px-5 py-3 text-sm font-medium text-[#f5f5f2] transition-transform hover:-translate-y-0.5">{user.displayName || t('workspace')} <ArrowUpRight className="ml-1 inline size-4" /></Link>
-          ) : (
-            <><Link href="/login" className="text-sm font-medium text-[#686864] transition-colors hover:text-[#151515]">{t('login')}</Link><Link href="/signup" className="rounded-full bg-[#171717] px-5 py-3 text-sm font-medium text-[#f5f5f2] transition-transform hover:-translate-y-0.5">{t('create')} <ArrowUpRight className="ml-1 inline size-4" /></Link></>
-          )}
+    <main className="min-h-screen overflow-hidden bg-background text-foreground">
+      <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-[1320px] items-center justify-between px-6 py-4 lg:px-10">
+          <Link href="#top" className="flex shrink-0 items-center" aria-label="Pexiloq home">
+            <img src="/Pexiloq_Logo.png" alt="Pexiloq" width={1774} height={887} className="h-12 w-auto object-contain sm:h-14 md:h-16 lg:h-18" />
+          </Link>
+          <nav className="hidden items-center gap-8 text-sm font-medium text-muted-foreground md:flex">
+            <Link className="transition-colors hover:text-foreground" href="#features">{t('features')}</Link>
+            <Link className="transition-colors hover:text-foreground" href="#how-it-works">{t('howItWorks')}</Link>
+            <Link className="transition-colors hover:text-foreground" href="#profiles">{t('explore')}</Link>
+          </nav>
+          <div className="hidden items-center gap-4 md:flex">
+            <LanguageSwitcher compact />
+            {authLoading ? <div className="h-10 w-24 animate-pulse rounded-full bg-secondary" /> : user ? (
+              <Link href="/dashboard" className="inline-flex items-center gap-1.5 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-xs transition hover:opacity-90">{user.displayName || t('workspace')} <ArrowUpRight className="size-4" /></Link>
+            ) : (
+              <><Link href="/login" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">{t('login')}</Link><Link href="/signup" className="inline-flex items-center gap-1.5 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-xs transition hover:opacity-90">{t('create')} <ArrowUpRight className="size-4" /></Link></>
+            )}
+          </div>
+          <button className="flex size-9 items-center justify-center rounded-full border bg-card md:hidden" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle navigation" aria-expanded={menuOpen}>{menuOpen ? <X className="size-4" /> : <Menu className="size-4" />}</button>
         </div>
-        <button className="md:hidden" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle navigation" aria-expanded={menuOpen}><Menu className="size-5" /></button>
       </header>
       {menuOpen && <nav className="mx-6 flex flex-col gap-4 border-t border-[#dcdcd6] py-5 text-sm md:hidden">{authLoading ? <div className="h-10 animate-pulse rounded-lg bg-[#e2e2db]" /> : user ? <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="font-semibold">{t('workspace')} <ArrowUpRight className="inline size-4" /></Link> : <><Link href="#features" onClick={() => setMenuOpen(false)}>{t('features')}</Link><Link href="#how-it-works" onClick={() => setMenuOpen(false)}>{t('howItWorks')}</Link><Link href="#profiles" onClick={() => setMenuOpen(false)}>{t('explore')}</Link><LanguageSwitcher /><Link href="/login" onClick={() => setMenuOpen(false)}>{t('login')}</Link><Link href="/signup" onClick={() => setMenuOpen(false)} className="font-semibold">{t('create')} <ArrowUpRight className="inline size-4" /></Link></>}</nav>}
 
