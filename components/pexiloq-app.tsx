@@ -1082,13 +1082,13 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
               </div>
             </div>
           </div>
-          <div className="lg:sticky lg:top-20 lg:self-start"><LivePreview profile={draftProfile} links={draftLinks} projects={draftProjects} /></div>
+          <div className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:self-start"><LivePreview profile={draftProfile} links={draftLinks} projects={draftProjects} /></div>
         </div>
       )}
       {kind === 'appearance' && (
         <div className="grid gap-8 lg:grid-cols-[1fr_0.75fr] lg:items-start">
           <div className="rounded-2xl border bg-card p-6 shadow-xs"><AppearanceControls draft={draftProfile} onChange={setDraftProfile} uid={uid} /></div>
-          <div className="lg:sticky lg:top-20 lg:self-start"><LivePreview profile={draftProfile} links={draftLinks} projects={draftProjects} /></div>
+          <div className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:self-start"><LivePreview profile={draftProfile} links={draftLinks} projects={draftProjects} /></div>
         </div>
       )}
       {kind === 'links' && (
@@ -1318,7 +1318,18 @@ function AppearanceControls({ draft, onChange, uid }: { draft: Profile; onChange
       <section>
         <p className="text-sm font-medium"><Type className="mr-2 inline size-4 text-muted-foreground" />{t('fontStyle')}</p>
         <div className="mt-4 flex flex-wrap gap-2">
-          {fontStyles.map((font) => <button key={font} onClick={() => onChange({ ...draft, fontStyle: font })} className={`rounded-xl border px-4 py-2 text-sm transition ${draft.fontStyle === font ? 'border-foreground bg-secondary font-medium' : 'hover:border-foreground/40'}`} style={{ fontFamily: fontPreviewFamily[font] }}>{t(fontLabelKey[font])}</button>)}
+          {fontStyles.map((font) => (
+            <button
+              key={font}
+              type="button"
+              onClick={() => onChange({ ...draft, fontStyle: font })}
+              aria-pressed={draft.fontStyle === font}
+              className={`rounded-xl border px-4 py-2 text-sm transition ${draft.fontStyle === font ? 'border-foreground bg-secondary font-semibold' : 'hover:border-foreground/40'}`}
+              style={{ fontFamily: fontPreviewFamily[font] }}
+            >
+              {t(fontLabelKey[font])}
+            </button>
+          ))}
         </div>
       </section>
       <section>
@@ -1618,7 +1629,7 @@ function Onboarding() {
       </div>
       {/* A live preview beside every step (not just the final privacy step) means the person
          sees their page take shape as they type, instead of filling out forms blind until the end. */}
-      {!isLast && <div className="hidden lg:block lg:sticky lg:top-20 lg:self-start"><LivePreview profile={draft} links={draftLinks.filter((i) => i.visible)} projects={draftProjects.filter((i) => i.visible)} /></div>}
+      {!isLast && <div className="hidden lg:block lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:self-start"><LivePreview profile={draft} links={draftLinks.filter((i) => i.visible)} projects={draftProjects.filter((i) => i.visible)} /></div>}
       </div>
     </div>
   )
