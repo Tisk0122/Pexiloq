@@ -377,12 +377,44 @@ function pageBackgroundStyle(profile: Profile): React.CSSProperties | undefined 
   return undefined
 }
 
-function CardImg({ src, alt, className }: { src: string; alt: string; className: string }) {
+// How mismatched an image's aspect ratio has to be from its frame before we stop trusting
+// a plain center-crop. A portrait avatar in a square frame, or a square logo in a wide banner
+// frame, loses its subject to object-cover — this is exactly the "avatar looks cropped/squished"
+// failure mode. Past this threshold we auto-switch to a contain-fit with a soft blurred backdrop
+// (the same technique Spotify/Apple Music use for mismatched cover art), so the full image is
+// always visible with no cropping and no visible letterboxing.
+const ASPECT_MISMATCH_THRESHOLD = 1.15
+
+function CardImg({ src, alt, className, fit = 'auto' }: { src: string; alt: string; className: string; fit?: 'auto' | 'cover' | 'contain' }) {
   const [loaded, setLoaded] = useState(false)
+  const [naturalRatio, setNaturalRatio] = useState<number | null>(null)
+  const frameRef = useRef<HTMLDivElement>(null)
+  const [frameRatio, setFrameRatio] = useState<number | null>(null)
+  useEffect(() => {
+    const el = frameRef.current
+    if (!el) return
+    const update = () => { if (el.offsetHeight > 0) setFrameRatio(el.offsetWidth / el.offsetHeight) }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const useContain = fit === 'contain' || (fit === 'auto' && naturalRatio !== null && frameRatio !== null && Math.max(naturalRatio, frameRatio) / Math.min(naturalRatio, frameRatio) > ASPECT_MISMATCH_THRESHOLD)
   return (
-    <div className={`relative overflow-hidden bg-secondary/60 ${className}`}>
+    <div ref={frameRef} className={`relative overflow-hidden bg-secondary/60 ${className}`}>
       {!loaded && <span className="absolute inset-0 animate-pulse bg-secondary" />}
-      <img src={src} alt={alt} onLoad={() => setLoaded(true)} onError={() => setLoaded(true)} className={`size-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`} />
+      {useContain && loaded && (
+        // Soft blurred fill behind a contain-fit image reads as an intentional frame rather
+        // than empty letterbox bars, while guaranteeing nothing from the original image is cropped off.
+        <img src={src} alt="" aria-hidden="true" className="absolute inset-0 size-full scale-110 object-cover opacity-60 blur-2xl" />
+      )}
+      <img
+        src={src}
+        alt={alt}
+        onLoad={(e) => { setLoaded(true); const img = e.currentTarget; if (img.naturalWidth && img.naturalHeight) setNaturalRatio(img.naturalWidth / img.naturalHeight) }}
+        onError={() => setLoaded(true)}
+        className={`relative size-full transition-opacity duration-300 ${useContain ? 'object-contain' : 'object-cover'} ${loaded ? 'opacity-100' : 'opacity-0'}`}
+      />
     </div>
   )
 }
@@ -568,13 +600,13 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
   }
   return (
     <div className={`pexiloq-fade-in mx-auto ${maxWidth} overflow-hidden border ${cardShadow} ${radius} ${skin.card} ${preview ? '' : 'my-8'}`}>
-      {profile.coverImageURL && <div className="h-28 w-full sm:h-36"><CardImg src={profile.coverImageURL} alt="" className="h-full w-full" /></div>}
+      {profile.coverImageURL && <div className="h-28 w-full sm:h-36"><CardImg src={profile.coverImageURL} alt="" className="h-full w-full" fit="cover" /></div>}
       <div className="p-5">
-      <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b pb-4 text-[10px] uppercase tracking-[0.18em] ${skin.bar} ${skin.sub}`}>
-        <span className="min-w-0 truncate">pexiloq.com / {profile.username}</span>
-        <span className="flex shrink-0 items-center gap-3">
-          <button onClick={() => setShowQr((v) => !v)} aria-label={t('showQr')} aria-pressed={showQr}>{t('qr')}</button>
-          <button onClick={share} aria-label={t('shareButton')}>{copied ? <Check className="inline size-3" /> : <Copy className="inline size-3" />} {copied ? t('copied') : t('shareButton')}</button>
+      <div className={`flex flex-wrap items-center justify-between gap-x-2 gap-y-2 border-b pb-3 text-[10px] uppercase tracking-[0.18em] ${skin.bar} ${skin.sub}`}>
+        <span className="min-w-0 truncate py-1">pexiloq.com / {profile.username}</span>
+        <span className="flex shrink-0 items-center gap-1">
+          <button onClick={() => setShowQr((v) => !v)} aria-label={t('showQr')} aria-pressed={showQr} className={`-my-1 rounded-full px-2.5 py-2 transition ${showQr ? 'bg-secondary/80' : 'hover:bg-secondary/50'}`}>{t('qr')}</button>
+          <button onClick={share} aria-label={t('shareButton')} className="-my-1 flex items-center gap-1 rounded-full px-2.5 py-2 transition hover:bg-secondary/50">{copied ? <Check className="inline size-3" /> : <Copy className="inline size-3" />} {copied ? t('copied') : t('shareButton')}</button>
         </span>
       </div>
       {showQr && !preview && (
@@ -587,9 +619,13 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
         <div className={isNameCard ? 'sm:w-64 sm:shrink-0 sm:text-left text-center' : ''}>
           {profile.showAvatar && (
             <div
-              className={`${isNameCard ? 'mx-auto sm:mx-0' : 'mx-auto'} relative grid size-20 place-items-center overflow-hidden bg-secondary text-xl font-medium ${avatarShapeClass[profile.avatarShape]} ${profile.avatarAnimation === 'pulse' ? 'pexiloq-avatar-pulse' : ''} ${profile.avatarAnimation === 'spin' ? 'pexiloq-avatar-spin' : ''} ${profile.avatarAnimation === 'glow' ? 'pexiloq-avatar-glow' : ''}`}
+              className={`${isNameCard ? 'mx-auto sm:mx-0' : 'mx-auto'} ${profile.coverImageURL ? '-mt-2' : ''} relative grid size-20 place-items-center overflow-hidden bg-secondary text-xl font-medium ${avatarShapeClass[profile.avatarShape]} ${profile.avatarAnimation === 'pulse' ? 'pexiloq-avatar-pulse' : ''} ${profile.avatarAnimation === 'spin' ? 'pexiloq-avatar-spin' : ''} ${profile.avatarAnimation === 'glow' ? 'pexiloq-avatar-glow' : ''}`}
               style={{
-                ...(profile.avatarRing ? { outline: `2px solid ${profile.accentColor}`, outlineOffset: 2 } : undefined),
+                // The ring always derives from the profile's own accent color, never a fixed
+                // hue, so it can't clash with a brand-colored avatar. A themed background
+                // ring plus a soft shadow lifts the avatar off a cover photo edge cleanly.
+                ...(profile.avatarRing ? { outline: `3px solid ${profile.accentColor}`, outlineOffset: 2 } : undefined),
+                boxShadow: profile.coverImageURL ? `0 4px 16px rgba(0,0,0,0.18)` : undefined,
                 ...(profile.avatarAnimation === 'spin' || profile.avatarAnimation === 'glow' ? ({ '--pexiloq-avatar-ring-color': profile.accentColor } as React.CSSProperties) : undefined),
               }}
             >
@@ -760,7 +796,21 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
   const descriptions = { profile: t('introduce'), links: t('important'), projects: t('considered'), appearance: t('tune') }
   return (
     <>
-      <PageHeader eyebrow={t('customize')} title={titles[kind]} description={descriptions[kind]} action={<button onClick={save} disabled={saving} className="rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground disabled:opacity-60">{saving ? <><Loader2 className="mr-2 inline size-4 animate-spin" />{t('saving')}</> : <><Save className="mr-2 inline size-4" />{notice || t('save')}</>}</button>} />
+      <PageHeader
+        eyebrow={t('customize')}
+        title={titles[kind]}
+        description={descriptions[kind]}
+        action={
+          <div className="flex flex-col items-end gap-1.5">
+            <button onClick={save} disabled={saving} className="rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground disabled:opacity-60">{saving ? <><Loader2 className="mr-2 inline size-4 animate-spin" />{t('saving')}</> : <><Save className="mr-2 inline size-4" />{notice || t('save')}</>}</button>
+            {/* Autosave already fires on every change — this caption makes that fact visible so
+               people trust it instead of anxiously mashing Save. */}
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              {saving ? <><Loader2 className="size-3 animate-spin" />{t('autosaving')}</> : notice ? <><Check className="size-3" />{t('autosaved')}</> : t('autosaveHint')}
+            </span>
+          </div>
+        }
+      />
       {kind === 'profile' && (
         <div className="grid gap-8 lg:grid-cols-[1fr_0.75fr]">
           <div className="space-y-4 rounded-2xl border bg-card p-6">
@@ -772,15 +822,18 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
             <div className="block text-sm">
               <span>{t('profilePhoto')}</span>
               <div className="mt-2 flex items-center gap-4">
-                <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary text-sm font-medium">
-                  {draftProfile.photoURL ? <img src={draftProfile.photoURL} alt="" className="size-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden' }} /> : (draftProfile.displayName || '?').slice(0, 2).toUpperCase()}
+                <div className="relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary text-sm font-medium">
+                  {draftProfile.photoURL ? <CardImg src={draftProfile.photoURL} alt="" className="size-full rounded-full" /> : (draftProfile.displayName || '?').slice(0, 2).toUpperCase()}
                 </div>
                 <div className="grid flex-1 gap-2">
-                  <input value={draftProfile.photoURL || ''} onChange={(e) => setDraftProfile({ ...draftProfile, photoURL: e.target.value.trim() })} className="w-full rounded-lg border bg-background px-3 py-2 text-sm" placeholder="https://…" />
                   <ImageUploader uid={uid} maxDimension={512} value={draftProfile.photoURL} shape="circle" aspect={1} onUploaded={(url) => setDraftProfile({ ...draftProfile, photoURL: url })} />
+                  <details className="text-xs text-muted-foreground">
+                    <summary className="cursor-pointer select-none">{t('orPasteUrl')}</summary>
+                    <input value={draftProfile.photoURL || ''} onChange={(e) => setDraftProfile({ ...draftProfile, photoURL: e.target.value.trim() })} className="mt-2 w-full rounded-lg border bg-background px-3 py-2 text-sm" placeholder="https://…" />
+                  </details>
                 </div>
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">{t('photoUrlHint')}</p>
+              <p className="mt-2 text-xs text-muted-foreground">{t('photoFitHint')}</p>
             </div>
             <div className="border-t pt-4">
               <p className="text-sm font-medium">{t('socialLinks')}</p>
@@ -827,6 +880,13 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
       )}
       {kind === 'links' && (
         <div className="max-w-3xl space-y-3">
+          {draftLinks.length === 0 && (
+            <div className="rounded-2xl border border-dashed bg-card/50 px-6 py-10 text-center">
+              <Link2 className="mx-auto size-6 text-muted-foreground" />
+              <p className="mt-3 text-sm font-medium">{t('noLinksYet')}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{t('noLinksYetHint')}</p>
+            </div>
+          )}
           {draftLinks.map((item, index) => (
             <div
               key={item.id}
@@ -882,6 +942,13 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
       )}
       {kind === 'projects' && (
         <div className="max-w-3xl space-y-3">
+          {draftProjects.length === 0 && (
+            <div className="rounded-2xl border border-dashed bg-card/50 px-6 py-10 text-center">
+              <Layers className="mx-auto size-6 text-muted-foreground" />
+              <p className="mt-3 text-sm font-medium">{t('noProjectsYet')}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{t('noProjectsYetHint')}</p>
+            </div>
+          )}
           {draftProjects.map((item, index) => (
             <div
               key={item.id}
@@ -1181,14 +1248,15 @@ function Onboarding() {
     }
   }
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-5xl">
       <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('workspace')}</p>
       <h2 className="mt-3 text-3xl font-medium tracking-[-0.05em] sm:text-4xl">{t('onboardingTitle')}</h2>
       <p className="mt-3 text-sm leading-6 text-muted-foreground">{t('onboardingSubtitle')}</p>
       <div className="mt-8 flex items-center gap-2 overflow-x-auto pb-2">{steps.map((s, i) => (
         <div key={s.label} className={`flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition ${i === step ? 'border-foreground bg-secondary font-medium' : i < step ? 'text-muted-foreground' : 'border-transparent text-muted-foreground/60'}`}><span className={`grid size-4 place-items-center rounded-full text-[10px] ${i < step ? 'bg-foreground text-background' : i === step ? 'bg-foreground/15' : ''}`}>{i < step ? <Check className="size-3" /> : i + 1}</span>{s.label}</div>
       ))}</div>
-      <div className="mt-6 rounded-2xl border bg-card p-6">
+      <div className={`mt-6 grid gap-6 ${isLast ? '' : 'lg:grid-cols-[1fr_0.75fr]'}`}>
+      <div className="rounded-2xl border bg-card p-6">
         <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{steps[step].label}</p>
         <p className="mt-2 text-sm text-muted-foreground">{steps[step].hint}</p>
         {step === 0 && (
@@ -1202,8 +1270,22 @@ function Onboarding() {
           <div className="mt-6 space-y-4">
             <Field label={t('bio')} value={draft.bio} onChange={(v) => setField({ bio: v })} area />
             <Field label={t('website')} value={draft.website} onChange={(v) => setField({ website: v })} />
-            <Field label={t('profilePhoto')} value={draft.photoURL || ''} placeholder="https://" onChange={(v) => setField({ photoURL: v.trim() })} />
-            <ImageUploader uid={uid} maxDimension={512} value={draft.photoURL} shape="circle" aspect={1} onUploaded={(url) => setField({ photoURL: url })} />
+            <div className="block text-sm">
+              <span>{t('profilePhoto')}</span>
+              <div className="mt-2 flex items-center gap-4">
+                <div className="relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary text-sm font-medium">
+                  {draft.photoURL ? <CardImg src={draft.photoURL} alt="" className="size-full rounded-full" /> : (draft.displayName || '?').slice(0, 2).toUpperCase()}
+                </div>
+                <div className="grid flex-1 gap-2">
+                  <ImageUploader uid={uid} maxDimension={512} value={draft.photoURL} shape="circle" aspect={1} onUploaded={(url) => setField({ photoURL: url })} />
+                  <details className="text-xs text-muted-foreground">
+                    <summary className="cursor-pointer select-none">{t('orPasteUrl')}</summary>
+                    <input value={draft.photoURL || ''} onChange={(e) => setField({ photoURL: e.target.value.trim() })} className="mt-2 w-full rounded-lg border bg-background px-3 py-2 text-sm" placeholder="https://…" />
+                  </details>
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">{t('photoFitHint')}</p>
+            </div>
           </div>
         )}
         {step === 2 && (
@@ -1252,6 +1334,10 @@ function Onboarding() {
           <button onClick={() => setStep((s) => Math.max(s - 1, 0))} disabled={step === 0} className="rounded-full border px-5 py-3 text-sm transition hover:border-foreground/40 disabled:opacity-40">{t('stepBack')}</button>
           {isLast ? <button onClick={finish} disabled={busy} className="flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground disabled:opacity-50">{busy ? <Loader2 className="size-4 animate-spin" /> : t('stepLaunch')}<ArrowUpRight className="size-4" /></button> : <button onClick={() => setStep((s) => Math.min(s + 1, steps.length - 1))} className="flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground">{t('stepNext')}<ArrowUpRight className="size-4" /></button>}
         </div>
+      </div>
+      {/* A live preview beside every step (not just the final privacy step) means the person
+         sees their page take shape as they type, instead of filling out forms blind until the end. */}
+      {!isLast && <div className="hidden lg:block"><LivePreview profile={draft} links={draftLinks.filter((i) => i.visible)} projects={draftProjects.filter((i) => i.visible)} /></div>}
       </div>
     </div>
   )
@@ -1497,6 +1583,7 @@ function ImageUploader({ uid, onUploaded, label, accept = 'image/*', className =
   const [phase, setPhase] = useState<'compress' | 'upload'>('upload')
   const [error, setError] = useState('')
   const [cropFile, setCropFile] = useState<File | null>(null)
+  const [dragOver, setDragOver] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   async function upload(uploadFile: Blob, contentType: string) {
     setBusy(true)
@@ -1547,9 +1634,20 @@ function ImageUploader({ uid, onUploaded, label, accept = 'image/*', className =
   const busyLabel = busy ? (phase === 'compress' ? t('compressing') : t('uploading')) : (label ?? t('uploadImage'))
   return (
     <div className={`flex flex-wrap items-center gap-2 ${className}`}>
-      <label className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm transition hover:border-foreground/40 ${busy ? 'pointer-events-none opacity-60' : ''}`}>
+      <label
+        onDragOver={(e) => { e.preventDefault(); if (!busy) setDragOver(true) }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault()
+          setDragOver(false)
+          if (busy) return
+          const f = e.dataTransfer.files?.[0]
+          if (f) void handleFile(f)
+        }}
+        className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm transition hover:border-foreground/40 ${busy ? 'pointer-events-none opacity-60' : ''} ${dragOver ? 'border-foreground bg-secondary ring-2 ring-foreground/15' : ''}`}
+      >
         {busy ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
-        {busyLabel}
+        {dragOver ? t('dropToUpload') : busyLabel}
         <input ref={inputRef} type="file" accept={accept} className="sr-only" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFile(f) }} />
       </label>
       {value && (
