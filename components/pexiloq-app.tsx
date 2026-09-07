@@ -32,6 +32,7 @@ export const colorThemePacks: ColorThemePack[] = ['custom', 'minimal', 'neon', '
 export type AvatarAnimation = 'none' | 'pulse' | 'spin' | 'glow'
 export const avatarAnimations: AvatarAnimation[] = ['none', 'pulse', 'spin', 'glow']
 export const fontStyles: FontStyle[] = ['sans', 'serif', 'mono', 'display', 'rounded', 'elegant']
+export type CoverImageFit = 'cover' | 'contain' | 'fill'
 export type Profile = {
   uid?: string
   username: string
@@ -70,6 +71,10 @@ export type Profile = {
   backgroundPatternDensity: number
   backgroundPatternColor: string
   coverImageURL: string
+  coverImageHeight: number
+  coverImageFit: CoverImageFit
+  coverImagePositionX: number
+  coverImagePositionY: number
   showVerifiedBadge: boolean
   avatarAnimation: AvatarAnimation
 }
@@ -135,7 +140,7 @@ const emptyProfile: Profile = {
   showAvatar: true, showBadge: true, showLinkIcons: true, cardShadow: true, spacing: 'cozy', socialStyle: 'outline', isPublic: true, onboarded: false,
   layoutTemplate: 'classic', sectionOrder: [...defaultSectionOrder],
   colorThemePack: 'custom', backgroundAnimated: false, backgroundOverlay: 0, backgroundPatternDensity: 1, backgroundPatternColor: '',
-  coverImageURL: '', showVerifiedBadge: false, avatarAnimation: 'none',
+  coverImageURL: '', coverImageHeight: 140, coverImageFit: 'cover', coverImagePositionX: 50, coverImagePositionY: 50, showVerifiedBadge: false, avatarAnimation: 'none',
 }
 
 // Ensures profiles saved before layoutTemplate/sectionOrder existed still render correctly.
@@ -152,6 +157,10 @@ function normalizeProfile(p: Partial<Profile>): Profile {
   if (!avatarAnimations.includes(merged.avatarAnimation)) merged.avatarAnimation = 'none'
   if (typeof merged.backgroundOverlay !== 'number' || Number.isNaN(merged.backgroundOverlay)) merged.backgroundOverlay = 0
   if (typeof merged.backgroundPatternDensity !== 'number' || Number.isNaN(merged.backgroundPatternDensity)) merged.backgroundPatternDensity = 1
+  if (typeof merged.coverImageHeight !== 'number' || Number.isNaN(merged.coverImageHeight) || merged.coverImageHeight <= 0) merged.coverImageHeight = 140
+  if (!['cover', 'contain', 'fill'].includes(merged.coverImageFit)) merged.coverImageFit = 'cover'
+  if (typeof merged.coverImagePositionX !== 'number' || Number.isNaN(merged.coverImagePositionX)) merged.coverImagePositionX = 50
+  if (typeof merged.coverImagePositionY !== 'number' || Number.isNaN(merged.coverImagePositionY)) merged.coverImagePositionY = 50
   return merged
 }
 
@@ -159,7 +168,7 @@ type TemplateBundle = { profile: Profile; links: LinkItem[]; projects: Project[]
 function makeTemplate(headline: string, bio: string, links: [string, string, string], projects: { title: string; description: string; tech: [string, string] }[]): TemplateBundle {
   const urls = ['https://medium.com', 'https://youtube.com', 'https://instagram.com']
   return {
-    profile: { username: 'amira', displayName: 'Amira Moss', headline, bio, photoURL: '', website: 'https://pexiloq.com', accentColor: '#171717', theme: 'light', buttonStyle: 'solid', cardRadius: '3xl', fontStyle: 'sans', backgroundStyle: 'default', backgroundImageURL: '', backgroundColor: '', backgroundGradient: '', backgroundPattern: 'dots', socials: {}, twitterIcon: 'x', avatarShape: 'circle', avatarRing: true, showAvatar: true, showBadge: true, showLinkIcons: true, cardShadow: true, spacing: 'cozy', socialStyle: 'outline', isPublic: true, onboarded: true, layoutTemplate: 'classic', sectionOrder: [...defaultSectionOrder], colorThemePack: 'custom', backgroundAnimated: false, backgroundOverlay: 0, backgroundPatternDensity: 1, backgroundPatternColor: '', coverImageURL: '', showVerifiedBadge: false, avatarAnimation: 'none' },
+    profile: { username: 'amira', displayName: 'Amira Moss', headline, bio, photoURL: '', website: 'https://pexiloq.com', accentColor: '#171717', theme: 'light', buttonStyle: 'solid', cardRadius: '3xl', fontStyle: 'sans', backgroundStyle: 'default', backgroundImageURL: '', backgroundColor: '', backgroundGradient: '', backgroundPattern: 'dots', socials: {}, twitterIcon: 'x', avatarShape: 'circle', avatarRing: true, showAvatar: true, showBadge: true, showLinkIcons: true, cardShadow: true, spacing: 'cozy', socialStyle: 'outline', isPublic: true, onboarded: true, layoutTemplate: 'classic', sectionOrder: [...defaultSectionOrder], colorThemePack: 'custom', backgroundAnimated: false, backgroundOverlay: 0, backgroundPatternDensity: 1, backgroundPatternColor: '', coverImageURL: '', coverImageHeight: 140, coverImageFit: 'cover', coverImagePositionX: 50, coverImagePositionY: 50, showVerifiedBadge: false, avatarAnimation: 'none' },
     links: links.map((title, i) => ({ id: String(i + 1), title, url: urls[i], visible: true })),
     projects: projects.map((p, i) => ({ id: String(i + 1), title: p.title, description: p.description, url: 'https://example.com', imageURL: '', technologies: [...p.tech], visible: true })),
   }
@@ -385,7 +394,7 @@ function pageBackgroundStyle(profile: Profile): React.CSSProperties | undefined 
 // always visible with no cropping and no visible letterboxing.
 const ASPECT_MISMATCH_THRESHOLD = 1.15
 
-function CardImg({ src, alt, className, fit = 'auto' }: { src: string; alt: string; className: string; fit?: 'auto' | 'cover' | 'contain' }) {
+function CardImg({ src, alt, className, fit = 'auto', style }: { src: string; alt: string; className: string; fit?: 'auto' | 'cover' | 'contain' | 'fill'; style?: React.CSSProperties }) {
   const [loaded, setLoaded] = useState(false)
   const [naturalRatio, setNaturalRatio] = useState<number | null>(null)
   const frameRef = useRef<HTMLDivElement>(null)
@@ -400,6 +409,7 @@ function CardImg({ src, alt, className, fit = 'auto' }: { src: string; alt: stri
     return () => ro.disconnect()
   }, [])
   const useContain = fit === 'contain' || (fit === 'auto' && naturalRatio !== null && frameRatio !== null && Math.max(naturalRatio, frameRatio) / Math.min(naturalRatio, frameRatio) > ASPECT_MISMATCH_THRESHOLD)
+  const objectFitClass = fit === 'fill' ? 'object-fill' : useContain ? 'object-contain' : 'object-cover'
   return (
     <div ref={frameRef} className={`relative overflow-hidden bg-secondary/60 ${className}`}>
       {!loaded && <span className="absolute inset-0 animate-pulse bg-secondary" />}
@@ -413,7 +423,8 @@ function CardImg({ src, alt, className, fit = 'auto' }: { src: string; alt: stri
         alt={alt}
         onLoad={(e) => { setLoaded(true); const img = e.currentTarget; if (img.naturalWidth && img.naturalHeight) setNaturalRatio(img.naturalWidth / img.naturalHeight) }}
         onError={() => setLoaded(true)}
-        className={`relative size-full transition-opacity duration-300 ${useContain ? 'object-contain' : 'object-cover'} ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        className={`relative size-full transition-opacity duration-300 ${objectFitClass} ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        style={style}
       />
     </div>
   )
@@ -600,7 +611,17 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
   }
   return (
     <div className={`pexiloq-fade-in mx-auto ${maxWidth} overflow-hidden border ${cardShadow} ${radius} ${skin.card} ${preview ? '' : 'my-8'}`}>
-      {profile.coverImageURL && <div className="h-28 w-full sm:h-36"><CardImg src={profile.coverImageURL} alt="" className="h-full w-full" fit="cover" /></div>}
+      {profile.coverImageURL && (
+        <div className="w-full" style={{ height: `${profile.coverImageHeight || 140}px` }}>
+          <CardImg
+            src={profile.coverImageURL}
+            alt=""
+            className="h-full w-full"
+            fit={profile.coverImageFit || 'cover'}
+            style={{ objectPosition: `${profile.coverImagePositionX ?? 50}% ${profile.coverImagePositionY ?? 50}%` }}
+          />
+        </div>
+      )}
       <div className="p-5">
       <div className={`flex flex-wrap items-center justify-between gap-x-2 gap-y-2 border-b pb-3 text-[10px] uppercase tracking-[0.18em] ${skin.bar} ${skin.sub}`}>
         <span className="min-w-0 truncate py-1">pexiloq.com / {profile.username}</span>
@@ -1120,9 +1141,77 @@ function AppearanceControls({ draft, onChange, uid }: { draft: Profile; onChange
       <section>
         <p className="text-sm font-medium">{t('coverImage')}</p>
         <p className="mt-1 text-xs text-muted-foreground">{t('coverImageHint')}</p>
-        <div className="mt-3 space-y-2">
+        <div className="mt-3 space-y-3">
           <input value={draft.coverImageURL || ''} onChange={(e) => onChange({ ...draft, coverImageURL: e.target.value.trim() })} className="w-full rounded-lg border bg-background px-3 py-2 text-sm" placeholder="https://…" />
-          {uid && <ImageUploader uid={uid} maxDimension={1600} value={draft.coverImageURL} shape="rect" aspect={3} onUploaded={(url) => onChange({ ...draft, coverImageURL: url })} onRemove={() => onChange({ ...draft, coverImageURL: '' })} />}
+          {uid && <ImageUploader uid={uid} maxDimension={1920} value={draft.coverImageURL} shape="rect" aspect={0} onUploaded={(url) => onChange({ ...draft, coverImageURL: url })} onRemove={() => onChange({ ...draft, coverImageURL: '' })} />}
+          {draft.coverImageURL && (
+            <div className="mt-4 space-y-4 rounded-xl border bg-secondary/30 p-4">
+              <div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{t('coverImageHeight')}</span>
+                  <span>{draft.coverImageHeight || 140}px</span>
+                </div>
+                <input
+                  type="range"
+                  min={80}
+                  max={360}
+                  step={10}
+                  value={draft.coverImageHeight || 140}
+                  onChange={(e) => onChange({ ...draft, coverImageHeight: Number(e.target.value) })}
+                  className="mt-2 w-full"
+                  aria-label={t('coverImageHeight')}
+                />
+              </div>
+              <div>
+                <span className="block text-xs font-medium text-muted-foreground">{t('coverImageFit')}</span>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(['cover', 'contain', 'fill'] as const).map((fit) => (
+                    <button
+                      key={fit}
+                      type="button"
+                      onClick={() => onChange({ ...draft, coverImageFit: fit })}
+                      aria-pressed={(draft.coverImageFit || 'cover') === fit}
+                      className={`rounded-full border px-3 py-1 text-xs capitalize transition ${(draft.coverImageFit || 'cover') === fit ? 'border-foreground bg-secondary font-medium' : 'hover:border-foreground/40'}`}
+                    >
+                      {t(`coverFit${fit.charAt(0).toUpperCase()}${fit.slice(1)}`)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{t('coverImagePositionX')}</span>
+                  <span>{draft.coverImagePositionX ?? 50}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={draft.coverImagePositionX ?? 50}
+                  onChange={(e) => onChange({ ...draft, coverImagePositionX: Number(e.target.value) })}
+                  className="mt-2 w-full"
+                  aria-label={t('coverImagePositionX')}
+                />
+              </div>
+              <div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{t('coverImagePositionY')}</span>
+                  <span>{draft.coverImagePositionY ?? 50}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={draft.coverImagePositionY ?? 50}
+                  onChange={(e) => onChange({ ...draft, coverImagePositionY: Number(e.target.value) })}
+                  className="mt-2 w-full"
+                  aria-label={t('coverImagePositionY')}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </section>
       <section>
@@ -1419,10 +1508,10 @@ type CropShape = 'circle' | 'rect'
 // X and Instagram: drag to reposition, slide to zoom, and the visible frame previews
 // exactly what will be uploaded. Works purely in the source image's own pixel space, so
 // the exported crop is full resolution regardless of how small the on-screen frame is.
-function ImageCropModal({ file, shape, aspect, maxDimension, title, onCancel, onConfirm }: {
+function ImageCropModal({ file, shape, aspect = 1, maxDimension, title, onCancel, onConfirm }: {
   file: File
   shape: CropShape
-  aspect: number
+  aspect?: number
   maxDimension: number
   title: string
   onCancel: () => void
@@ -1435,10 +1524,9 @@ function ImageCropModal({ file, shape, aspect, maxDimension, title, onCancel, on
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [zoom, setZoom] = useState(1)
+  const [aspectPreset, setAspectPreset] = useState<number>(aspect || 0)
   const center = useRef({ x: 0, y: 0 })
   const dragState = useRef<{ x: number; y: number } | null>(null)
-  const frameW = 320
-  const frameH = shape === 'circle' ? 320 : Math.round(320 / aspect)
 
   useEffect(() => {
     let cancelled = false
@@ -1450,6 +1538,17 @@ function ImageCropModal({ file, shape, aspect, maxDimension, title, onCancel, on
     }).catch(() => { if (!cancelled) setError(t('uploadFailed')) })
     return () => { cancelled = true; bitmapRef.current?.close() }
   }, [file])
+
+  const effectiveAspect = shape === 'circle'
+    ? 1
+    : aspectPreset > 0
+      ? aspectPreset
+      : bitmapRef.current
+        ? bitmapRef.current.width / bitmapRef.current.height
+        : 1
+
+  const frameW = 320
+  const frameH = shape === 'circle' ? 320 : Math.min(320, Math.max(80, Math.round(320 / effectiveAspect)))
 
   function minScale() {
     const bitmap = bitmapRef.current
@@ -1479,7 +1578,7 @@ function ImageCropModal({ file, shape, aspect, maxDimension, title, onCancel, on
     ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, frameW, frameH)
   }
 
-  useEffect(() => { if (ready) draw() }, [ready, zoom])
+  useEffect(() => { if (ready) draw() }, [ready, zoom, aspectPreset])
 
   function panBy(dx: number, dy: number) {
     const bitmap = bitmapRef.current
@@ -1511,8 +1610,14 @@ function ImageCropModal({ file, shape, aspect, maxDimension, title, onCancel, on
     setBusy(true)
     setError('')
     try {
-      const outW = shape === 'circle' ? maxDimension : maxDimension
-      const outH = shape === 'circle' ? maxDimension : Math.round(maxDimension / aspect)
+      const { sx, sy, sw, sh } = sourceRect()
+      let outW = maxDimension
+      let outH = Math.round(maxDimension / effectiveAspect)
+      if (shape !== 'circle' && (aspect <= 0 || aspectPreset === 0)) {
+        const scale = Math.min(1, maxDimension / Math.max(sw, sh))
+        outW = Math.max(1, Math.round(sw * scale))
+        outH = Math.max(1, Math.round(sh * scale))
+      }
       const canvas = document.createElement('canvas')
       canvas.width = outW
       canvas.height = outH
@@ -1520,7 +1625,6 @@ function ImageCropModal({ file, shape, aspect, maxDimension, title, onCancel, on
       if (!ctx) throw new Error('canvas unavailable')
       ctx.imageSmoothingEnabled = true
       ctx.imageSmoothingQuality = 'high'
-      const { sx, sy, sw, sh } = sourceRect()
       ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, outW, outH)
       let best: { blob: Blob; type: string } | null = null
       for (const m of ['image/webp', 'image/jpeg']) {
@@ -1567,6 +1671,26 @@ function ImageCropModal({ file, shape, aspect, maxDimension, title, onCancel, on
             aria-label={t('cropZoom')}
           />
         </div>
+        {shape === 'rect' && aspect <= 0 && (
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-xs">
+            {([
+              { label: t('aspectFree'), value: 0 },
+              { label: '3:1', value: 3 },
+              { label: '16:9', value: 16 / 9 },
+              { label: '4:3', value: 4 / 3 },
+              { label: '1:1', value: 1 },
+            ] as const).map((opt) => (
+              <button
+                key={opt.label}
+                type="button"
+                onClick={() => setAspectPreset(opt.value)}
+                className={`rounded-full border px-2.5 py-1 transition ${aspectPreset === opt.value ? 'border-foreground bg-secondary font-medium' : 'text-muted-foreground hover:border-foreground/40'}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
         {error && <p role="alert" className="mt-3 flex items-center gap-1.5 text-xs text-destructive"><CircleAlert className="size-3.5" />{error}</p>}
         <div className="mt-6 flex justify-end gap-3">
           <button type="button" onClick={onCancel} disabled={busy} className="rounded-full border px-5 py-2.5 text-sm transition hover:border-foreground/40 disabled:opacity-40">{t('cancel')}</button>
@@ -1717,7 +1841,7 @@ function PhonePreviewFrame({ profile, children }: { profile: Profile; children: 
           <div className="pexiloq-phone-scroll">
             <div style={{ position: 'relative', height: contentHeight ? contentHeight * scale : undefined }}>
               <div ref={contentRef} style={{ position: 'absolute', top: 0, left: 0, width: PHONE_CONTENT_WIDTH, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
-                <PageBackground profile={profile} className={`min-h-[844px] px-5 py-8 ${skin}`}>
+                <PageBackground profile={profile} className={`min-h-[844px] px-5 pb-8 pt-12 ${skin}`}>
                   {children}
                 </PageBackground>
               </div>
