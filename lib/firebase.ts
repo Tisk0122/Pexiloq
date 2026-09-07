@@ -1,22 +1,14 @@
 'use client'
 
-import { initializeApp, getApps, type FirebaseApp } from 'firebase/app'
+import type { FirebaseApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
+import { firebaseApp, firebaseEnabled, firebaseConfig, type AppConfig } from '@/lib/firebase-app'
 
-const config = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'pexiloq.firebaseapp.com',
-  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'pexiloq',
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'pexiloq.firebasestorage.app',
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '44563563707',
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '1:44563563707:web:4294e5bd7bae2eda33d59e',
-}
-
-export const firebaseEnabled = Boolean(config.apiKey)
-export const app: FirebaseApp | null = firebaseEnabled ? (getApps()[0] || initializeApp(config)) : null
+export { firebaseEnabled, firebaseConfig }
+export type { AppConfig }
+export const app: FirebaseApp | null = firebaseApp
 export const auth = app ? getAuth(app) : null
 export const db = app ? getFirestore(app) : null
 export const storage = app ? getStorage(app) : null
@@ -25,9 +17,6 @@ export function requireFirebase() {
   if (!app || !auth || !db) throw new Error('Firebase is not configured. Add NEXT_PUBLIC_FIREBASE_API_KEY to enable persistence.')
   return { app, auth, db, storage }
 }
-
-export type AppConfig = typeof config
-export const firebaseConfig = config
 
 export async function uploadImage(file: File, path: string) {
   const { storage: bucket } = requireFirebase()

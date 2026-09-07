@@ -641,10 +641,43 @@ const translations: Record<Language, Dictionary> = {
 
 const Context = createContext<{ language: Language; setLanguage: (language: Language) => void; t: (key: string) => string }>({ language: 'en', setLanguage: () => {}, t: (key) => en[key] ?? key })
 
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>('en')
-  useEffect(() => { const stored = window.localStorage.getItem('pexiloq-language') as Language | null; const browser = navigator.language.slice(0, 2) as Language; const next = stored && languages[stored] ? stored : languages[browser] ? browser : 'en'; setLanguageState(next); document.documentElement.lang = next }, [])
-  const setLanguage = (next: Language) => { setLanguageState(next); window.localStorage.setItem('pexiloq-language', next); document.documentElement.lang = next }
+const LANGUAGE_COOKIE = 'pexiloq-language'
+
+function readLanguageCookie(): Language | null {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${LANGUAGE_COOKIE}=([^;]*)`))
+  const value = match ? decodeURIComponent(match[1]) : null
+  return value && languages[value as Language] ? (value as Language) : null
+}
+
+function writeLanguageCookie(value: Language) {
+  // 1 year, readable by the server on the next request so <html lang> and any
+  // future SSR/metadata can match the user's saved preference immediately,
+  // instead of only after client-side hydration.
+  document.cookie = `${LANGUAGE_COOKIE}=${value}; path=/; max-age=31536000; SameSite=Lax`
+}
+
+// serverLanguage is the value the root layout already resolved from the
+// pexiloq-language cookie (or the Accept-Language header) on the server, so
+// the very first client render matches what was sent down — no flash of the
+// wrong language before this effect runs.
+export function I18nProvider({ children, serverLanguage }: { children: React.ReactNode; serverLanguage?: Language }) {
+  const [language, setLanguageState] = useState<Language>(serverLanguage && languages[serverLanguage] ? serverLanguage : 'en')
+  useEffect(() => {
+    const stored = readLanguageCookie() || (window.localStorage.getItem('pexiloq-language') as Language | null)
+    const browser = navigator.language.slice(0, 2) as Language
+    const next = stored && languages[stored] ? stored : languages[browser] ? browser : 'en'
+    setLanguageState(next)
+    document.documentElement.lang = next
+    // Keep the cookie in sync even when the language came from localStorage or
+    // browser detection, so the next server render also picks it up.
+    writeLanguageCookie(next)
+  }, [])
+  const setLanguage = (next: Language) => {
+    setLanguageState(next)
+    window.localStorage.setItem('pexiloq-language', next)
+    writeLanguageCookie(next)
+    document.documentElement.lang = next
+  }
   const dictionary = useMemo(() => translations[language], [language])
   return <Context.Provider value={{ language, setLanguage, t: (key) => dictionary[key] ?? en[key] ?? key }}>{children}</Context.Provider>
 }

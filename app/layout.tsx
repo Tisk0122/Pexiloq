@@ -1,21 +1,55 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
+import { cookies, headers } from 'next/headers'
 import './globals.css'
-import { I18nProvider, TranslationMeta } from '@/components/i18n-provider'
+import { I18nProvider, TranslationMeta, supportedLanguages, type Language } from '@/components/i18n-provider'
 import { WorkspaceProvider } from '@/components/pexiloq-app'
 import { Noto_Sans_JP } from 'next/font/google'
+import { defaultDescription, defaultOgImage, defaultTitle, siteName, siteUrl } from '@/lib/site'
 
 const cjkFont = Noto_Sans_JP({ subsets: ['latin'], variable: '--font-cjk' })
 
-export const metadata: Metadata = {
-  title: 'Pexiloq — Everything you share, in one place.',
-  description: 'Create a beautiful personal home for your links, projects, and everything that represents you.',
-  generator: 'Pexiloq',
-  icons: {
-    icon: '/Pexiloq_Icon.png',
-    shortcut: '/Pexiloq_Icon.png',
-    apple: '/Pexiloq_Icon.png',
-  },
+const ogLocales: Record<Language, string> = {
+  en: 'en_US', ja: 'ja_JP', zh: 'zh_CN', ko: 'ko_KR', es: 'es_ES', fr: 'fr_FR', de: 'de_DE', pt: 'pt_PT', hi: 'hi_IN',
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const language = await resolveServerLanguage()
+  return {
+    metadataBase: new URL(siteUrl),
+    title: { default: defaultTitle, template: `%s · ${siteName}` },
+    description: defaultDescription,
+    applicationName: siteName,
+    generator: 'Pexiloq',
+    keywords: ['Pexiloq', 'link in bio', 'personal page', 'portfolio', 'link tree', 'profile page'],
+    referrer: 'origin-when-cross-origin',
+    icons: {
+      icon: [{ url: '/Pexiloq_Icon.png', type: 'image/png' }],
+      shortcut: '/Pexiloq_Icon.png',
+      apple: [{ url: '/Pexiloq_Icon.png', type: 'image/png' }],
+    },
+    alternates: { canonical: '/' },
+    openGraph: {
+      type: 'website',
+      url: '/',
+      siteName,
+      title: defaultTitle,
+      description: defaultDescription,
+      images: [{ url: defaultOgImage, width: 1200, height: 630, alt: siteName }],
+      locale: ogLocales[language] || 'en_US',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: defaultTitle,
+      description: defaultDescription,
+      images: [defaultOgImage],
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: { index: true, follow: true, 'max-image-preview': 'large' },
+    },
+  }
 }
 
 export const viewport: Viewport = {
@@ -26,15 +60,36 @@ export const viewport: Viewport = {
   ],
 }
 
-export default function RootLayout({
+// Resolves the language to render <html lang="…"> with on the very first
+// server-rendered response: the user's saved preference (cookie) takes
+// priority, then the browser's Accept-Language header, then English. This is
+// what makes the page (and the browser tab / translate prompt) start in the
+// right language immediately — including for search engine crawlers, which
+// never run the client-side language-detection effect at all.
+async function resolveServerLanguage(): Promise<Language> {
+  const cookieStore = await cookies()
+  const cookieLang = cookieStore.get('pexiloq-language')?.value as Language | undefined
+  if (cookieLang && supportedLanguages[cookieLang]) return cookieLang
+
+  const headerList = await headers()
+  const acceptLanguage = headerList.get('accept-language') || ''
+  for (const tag of acceptLanguage.split(',')) {
+    const code = tag.trim().split(';')[0].split('-')[0] as Language
+    if (supportedLanguages[code]) return code
+  }
+  return 'en'
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const language = await resolveServerLanguage()
   return (
-    <html lang="en" data-scroll-behavior="smooth">
+    <html lang={language} data-scroll-behavior="smooth">
       <body className={`${cjkFont.variable} antialiased`}>
-        <I18nProvider><WorkspaceProvider><TranslationMeta />{children}</WorkspaceProvider></I18nProvider>
+        <I18nProvider serverLanguage={language}><WorkspaceProvider><TranslationMeta />{children}</WorkspaceProvider></I18nProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
