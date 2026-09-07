@@ -80,6 +80,9 @@ const en: Dictionary = {
   backgroundAnimated: 'Animate gradient', backgroundOverlay: 'Image overlay darkness',
   patternColor: 'Pattern color', patternDensity: 'Pattern density',
   cropHint: 'Drag to reposition, use the slider to zoom.', cropZoom: 'Zoom', cropApply: 'Apply', removeImage: 'Remove image',
+  aspectFree: 'Free', coverImageHeight: 'Cover image height', coverImageFit: 'Fit mode',
+  coverFitCover: 'Cover', coverFitContain: 'Contain', coverFitFill: 'Fill',
+  coverImagePositionX: 'Horizontal focus position', coverImagePositionY: 'Vertical focus position',
 }
 
 const translations: Record<Language, Dictionary> = {
@@ -153,6 +156,9 @@ const translations: Record<Language, Dictionary> = {
     backgroundAnimated: 'グラデーションをアニメーション', backgroundOverlay: '画像の暗さオーバーレイ',
     patternColor: 'パターンの色', patternDensity: 'パターンの密度',
     cropHint: 'ドラッグして位置を調整し、スライダーでズームできます。', cropZoom: 'ズーム', cropApply: '適用', removeImage: '画像を削除',
+    aspectFree: 'フリー', coverImageHeight: 'カバー画像の高さ', coverImageFit: '表示モード',
+    coverFitCover: 'カバー（トリミング）', coverFitContain: '全体表示', coverFitFill: '引き伸ばし',
+    coverImagePositionX: '水平位置（フォーカス）', coverImagePositionY: '垂直位置（フォーカス）',
   },
   zh: {
     ...en, language: '语言', home: '首页', features: '功能', howItWorks: '使用方法', explore: '探索个人主页', login: '登录', create: '创建 Pexiloq',
