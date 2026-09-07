@@ -43,7 +43,7 @@ async function safeImageDataUri(url: string | undefined | null): Promise<string 
   if (!url) return null
   try {
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 4000)
+    const timeout = setTimeout(() => controller.abort(), 1800)
     const res = await fetch(url, { signal: controller.signal })
     clearTimeout(timeout)
     if (!res.ok) return null
@@ -112,12 +112,12 @@ async function fetchWithTimeout(url: string, ms: number, init?: RequestInit): Pr
 async function loadGoogleFont(family: string, text: string): Promise<ArrayBuffer | null> {
   try {
     const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@600&text=${encodeURIComponent(text)}`
-    const cssRes = await fetchWithTimeout(cssUrl, 2500, { headers: { 'User-Agent': LEGACY_UA } })
+    const cssRes = await fetchWithTimeout(cssUrl, 1500, { headers: { 'User-Agent': LEGACY_UA } })
     const css = cssRes ? await cssRes.text() : null
     if (!css) return null
     const fontUrl = css.match(/url\(([^)]+)\)\s*format\('truetype'\)/)?.[1] ?? css.match(/url\(([^)]+)\)/)?.[1]
     if (!fontUrl) return null
-    const fontRes = await fetchWithTimeout(fontUrl, 2500)
+    const fontRes = await fetchWithTimeout(fontUrl, 1500)
     if (!fontRes) return null
     return await fontRes.arrayBuffer()
   } catch {
@@ -158,15 +158,28 @@ async function loadFonts(text: string): Promise<{ fonts: FontEntry[]; families: 
   const families = ['Noto Sans', ...detectScripts(text).map((script) => SCRIPT_FONT_FAMILY[script])]
   const fonts = await withTimeout(
     Promise.all(families.map((family) => getFont(family, text))).then((list) => list.filter((f): f is FontEntry => f !== null)),
-    3500,
+    1800,
     []
   )
   return { fonts, families }
 }
 
+// Hard ceiling on the whole data-gathering phase (profile lookup + cover/avatar
+// fetch + font loading). Individual steps already have their own timeouts, but
+// nothing previously bounded their *sum* — Firestore could take up to 4s and the
+// font/image fetches up to another ~4s after it, so a route that "degraded
+// gracefully" at every step could still take ~8s end to end. Social-media link
+// crawlers (Discord, Slack, Twitter/X) generally give up well before that and
+// show no preview image at all, which is what was happening here even though no
+// individual request ever actually failed. Capping the combined phase keeps the
+// whole route comfortably inside what crawlers and the hosting platform allow.
+async function withOverallTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([promise, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))])
+}
+
 export default async function OpengraphImage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params
-  const meta = await loadPublicProfileMeta(username)
+  const meta = await withOverallTimeout(loadPublicProfileMeta(username), 2500, null)
 
   const displayName = meta?.displayName?.trim() || username
   const headline = meta?.headline?.trim() || meta?.bio?.trim() || ''
@@ -179,12 +192,16 @@ export default async function OpengraphImage({ params }: { params: Promise<{ use
 
   const allText = `${displayName} @${username} ${headline} pexiloq.vercel.app ${initials}`
 
-  const [logo, cover, avatar, { fonts, families }] = await Promise.all([
-    logoDataUri(),
-    safeImageDataUri(meta?.coverImageURL),
-    safeImageDataUri(meta?.showAvatar === false ? null : meta?.photoURL),
-    loadFonts(allText),
-  ])
+  const [logo, cover, avatar, { fonts, families }] = await withOverallTimeout(
+    Promise.all([
+      logoDataUri(),
+      safeImageDataUri(meta?.coverImageURL),
+      safeImageDataUri(meta?.showAvatar === false ? null : meta?.photoURL),
+      loadFonts(allText),
+    ]),
+    2200,
+    [null, null, null, { fonts: [], families: ['Noto Sans'] }] as [string | null, string | null, string | null, { fonts: FontEntry[]; families: string[] }]
+  )
 
   const fontFamilyStack = [...families, 'sans-serif'].join(', ')
 

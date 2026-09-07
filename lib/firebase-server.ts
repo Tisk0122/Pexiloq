@@ -55,7 +55,7 @@ export const loadPublicProfileMeta = (() => {
       const firestore = await getDb()
       if (firestore) {
         const { collection, query, where, limit, getDocs } = await import('firebase/firestore')
-        const snap = await withTimeout(getDocs(query(collection(firestore, 'users'), where('username', '==', username), limit(1))), 4000, null)
+        const snap = await withTimeout(getDocs(query(collection(firestore, 'users'), where('username', '==', username), limit(1))), 2500, null)
         const doc = snap?.docs[0]
         if (doc) {
           const data = doc.data() as Record<string, unknown>
