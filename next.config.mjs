@@ -15,6 +15,26 @@ const nextConfig = {
   outputFileTracingIncludes: {
     '/[username]/opengraph-image': ['./assets/fonts/**'],
   },
+  // The metadata-image machinery (opengraph-image.tsx) makes Next statically
+  // trace next/dist/server/image-optimizer.js, which pulls in `sharp` even
+  // though images.unoptimized:true means it's never actually called. That
+  // drags in three redundant platform builds of libvips (~45MB total) into
+  // this route's serverless function. Vercel's Node.js runtime is glibc
+  // linux-x64, so the musl and wasm32 builds are dead weight — excluding
+  // them cuts ~27MB from this function without touching any code path that
+  // actually runs.
+  outputFileTracingExcludes: {
+    '/[username]/opengraph-image': [
+      './node_modules/@img/sharp-libvips-linuxmusl-x64/**',
+      './node_modules/@img/sharp-linuxmusl-x64/**',
+      './node_modules/@img/sharp-wasm32/**',
+    ],
+    '/[username]': [
+      './node_modules/@img/sharp-libvips-linuxmusl-x64/**',
+      './node_modules/@img/sharp-linuxmusl-x64/**',
+      './node_modules/@img/sharp-wasm32/**',
+    ],
+  },
 }
 
 export default nextConfig

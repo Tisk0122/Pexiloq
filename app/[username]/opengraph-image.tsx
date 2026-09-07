@@ -17,7 +17,8 @@ async function logoDataUri() {
   try {
     const file = await readFile(path.join(process.cwd(), 'public', 'Pexiloq_Icon.png'))
     return `data:image/png;base64,${file.toString('base64')}`
-  } catch {
+  } catch (err) {
+    console.error('[og-image] logoDataUri failed:', err)
     return null
   }
 }
@@ -52,7 +53,8 @@ async function safeImageDataUri(url: string | undefined | null): Promise<string 
     const buffer = await res.arrayBuffer()
     if (buffer.byteLength === 0) return null
     return `data:${contentType};base64,${Buffer.from(buffer).toString('base64')}`
-  } catch {
+  } catch (err) {
+    console.error('[og-image] safeImageDataUri failed:', url, err)
     return null
   }
 }
@@ -119,7 +121,10 @@ function getFont(family: string, filename: string): Promise<FontEntry | null> {
   if (cached) return cached
   const promise = readFile(path.join(FONTS_DIR, filename))
     .then((data) => ({ name: family, data, weight: 600 as const, style: 'normal' as const }))
-    .catch(() => null)
+    .catch((err) => {
+      console.error('[og-image] getFont failed:', family, filename, err)
+      return null
+    })
   fontCache.set(family, promise)
   return promise
 }
@@ -300,10 +305,11 @@ export default async function OpengraphImage({ params }: { params: Promise<{ use
 
   try {
     return new ImageResponse(image, { ...size, fonts: fonts.length ? fonts : undefined })
-  } catch {
+  } catch (err) {
     // Last-resort fallback: if rendering still fails for some unforeseen
     // reason, still return a valid, branded PNG instead of a 500 — a plain
     // preview beats social platforms showing no image or a stale one.
+    console.error('[og-image] ImageResponse render failed, falling back:', err)
     return new ImageResponse(
       (
         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: BRAND_BG }}>
