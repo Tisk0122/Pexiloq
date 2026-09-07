@@ -75,17 +75,18 @@ const SCRIPT_FONT_FAMILY: Record<string, string> = {
 
 function detectScripts(text: string): string[] {
   const scripts: string[] = []
-  if (/[\u3040-\u30ff]/.test(text)) scripts.push('ja')
+  // Hiragana, Katakana, Kanji (CJK Unified Ideographs) -> Japanese font
+  if (/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(text)) scripts.push('ja')
   if (/[\uac00-\ud7a3]/.test(text)) scripts.push('ko')
   if (/[\u4e00-\u9fff]/.test(text) && !scripts.includes('ja')) scripts.push('zh')
   if (/[\u0900-\u097f]/.test(text)) scripts.push('hi')
   return scripts
 }
 
-// Google Fonts serves woff2 by default, which satori can't parse — it only
-// supports ttf/otf. Requesting with an old-browser user agent makes the CSS2
-// API fall back to ttf, which is the standard workaround for this.
-const LEGACY_UA = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:27.0) Gecko/20100101 Firefox/27.0'
+// Google Fonts serves woff/woff2 by default to modern browsers. Satori only
+// supports ttf/otf. An older Safari User-Agent reliably forces Google Fonts to
+// return format('truetype') font files.
+const LEGACY_UA = 'Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_8; de-at) AppleWebKit/533.21.1 (KHTML, like Gecko) Version/5.0.5 Safari/533.21.1'
 
 // A plain fetch() in Node has NO timeout by default. A dynamic OG image route
 // that hangs waiting on a third-party font host (blocked egress, slow DNS,
@@ -134,10 +135,13 @@ type FontEntry = { name: string; data: ArrayBuffer; weight: 600; style: 'normal'
 const fontCache = new Map<string, Promise<FontEntry | null>>()
 
 function getFont(family: string, text: string): Promise<FontEntry | null> {
-  const cacheKey = family
+  // Sort and deduplicate characters in `text` to maximize cache hits while
+  // ensuring every required glyph is included in the Google Fonts subset.
+  const uniqueChars = Array.from(new Set(text)).sort().join('')
+  const cacheKey = `${family}:${uniqueChars}`
   const cached = fontCache.get(cacheKey)
   if (cached) return cached
-  const promise = loadGoogleFont(family, text).then((data) => (data ? { name: family, data, weight: 600 as const, style: 'normal' as const } : null))
+  const promise = loadGoogleFont(family, uniqueChars).then((data) => (data ? { name: family, data, weight: 600 as const, style: 'normal' as const } : null))
   fontCache.set(cacheKey, promise)
   return promise
 }

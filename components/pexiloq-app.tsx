@@ -728,7 +728,7 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
     projects: <ProjectsSection key="projects" profile={profile} projects={projects} skin={skin} layout={layout} onTrack={onTrack} t={t} />,
   }
   return (
-    <div className={`pexiloq-fade-in mx-auto ${maxWidth} overflow-hidden border ${cardShadow} ${radius} ${skin.card} ${preview ? '' : 'my-8'}`}>
+    <div className={`pexiloq-fade-in mx-auto ${maxWidth} ${font} overflow-hidden border ${cardShadow} ${radius} ${skin.card} ${preview ? '' : 'my-8'}`}>
       {profile.coverImageURL && (
         <div className="w-full" style={{ height: `${profile.coverImageHeight || 140}px` }}>
           <CardImg
@@ -1293,19 +1293,19 @@ function AppearanceControls({ draft, onChange, uid }: { draft: Profile; onChange
       <section>
         <p className="text-sm font-medium"><Zap className="mr-2 inline size-4 text-muted-foreground" />{t('theme')}</p>
         <div className="mt-4 grid grid-cols-2 gap-3">
-          {(['light', 'dark'] as const).map((theme) => <button key={theme} onClick={() => onChange({ ...draft, theme, colorThemePack: 'custom' })} className={`rounded-xl border px-4 py-3 text-left text-sm capitalize transition ${draft.theme === theme ? 'border-foreground bg-secondary font-medium' : 'hover:border-foreground/40'}`}>{t(theme)}</button>)}
+          {(['light', 'dark'] as const).map((theme) => <button key={theme} onClick={() => onChange({ ...draft, theme, colorThemePack: 'custom' })} className={`rounded-xl border px-4 py-3 text-left text-sm transition ${draft.theme === theme ? 'border-foreground bg-secondary font-medium' : 'hover:border-foreground/40'}`}>{t(theme)}</button>)}
         </div>
       </section>
       <section>
         <p className="text-sm font-medium">{t('buttonStyle')}</p>
         <div className="mt-4 flex flex-wrap gap-2">
-          {(['solid', 'outline', 'ghost'] as const).map((style) => <button key={style} onClick={() => onChange({ ...draft, buttonStyle: style })} className={`rounded-full border px-4 py-2 text-sm capitalize transition ${draft.buttonStyle === style ? 'border-foreground bg-secondary font-medium' : 'hover:border-foreground/40'}`} style={draft.buttonStyle === style ? { borderColor: draft.accentColor, color: draft.accentColor } : undefined}>{t(style)}</button>)}
+          {(['solid', 'outline', 'ghost'] as const).map((style) => <button key={style} onClick={() => onChange({ ...draft, buttonStyle: style })} className={`rounded-full border px-4 py-2 text-sm transition ${draft.buttonStyle === style ? 'border-foreground bg-secondary font-medium' : 'hover:border-foreground/40'}`} style={draft.buttonStyle === style ? { borderColor: draft.accentColor, color: draft.accentColor } : undefined}>{t(style)}</button>)}
         </div>
       </section>
       <section>
         <p className="text-sm font-medium">{t('spacing')}</p>
         <div className="mt-4 flex flex-wrap gap-2">
-          {densityPresets.map((density) => <button key={density} onClick={() => onChange({ ...draft, spacing: density })} className={`rounded-full border px-4 py-2 text-sm capitalize transition ${draft.spacing === density ? 'border-foreground bg-secondary font-medium' : 'hover:border-foreground/40'}`}>{t(densityLabelKey[density])}</button>)}
+          {densityPresets.map((density) => <button key={density} onClick={() => onChange({ ...draft, spacing: density })} className={`rounded-full border px-4 py-2 text-sm transition ${draft.spacing === density ? 'border-foreground bg-secondary font-medium' : 'hover:border-foreground/40'}`}>{t(densityLabelKey[density])}</button>)}
         </div>
       </section>
       <section>
@@ -1374,7 +1374,7 @@ function AppearanceControls({ draft, onChange, uid }: { draft: Profile; onChange
                       type="button"
                       onClick={() => onChange({ ...draft, coverImageFit: fit })}
                       aria-pressed={(draft.coverImageFit || 'cover') === fit}
-                      className={`rounded-full border px-3 py-1 text-xs capitalize transition ${(draft.coverImageFit || 'cover') === fit ? 'border-foreground bg-secondary font-medium' : 'hover:border-foreground/40'}`}
+                      className={`rounded-full border px-3 py-1 text-xs transition ${(draft.coverImageFit || 'cover') === fit ? 'border-foreground bg-secondary font-medium' : 'hover:border-foreground/40'}`}
                     >
                       {t(`coverFit${fit.charAt(0).toUpperCase()}${fit.slice(1)}`)}
                     </button>
