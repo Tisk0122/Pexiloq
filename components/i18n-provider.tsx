@@ -12,6 +12,7 @@ type Dictionary = Record<string, string>
 const en: Dictionary = {
   language: 'Language', home: 'Home', features: 'Features', howItWorks: 'How it works', explore: 'Explore profiles', login: 'Log in', create: 'Create your Pexiloq',
   heroKicker: 'A home for your world', heroTitle: 'Everything you share, in one place.', heroBody: 'Your links, projects, profiles, and everything that represents you — beautifully brought together in one place.',
+  patternsHeading: 'Three ways to make it yours.', patternsBody: 'Every Pexiloq page starts from the same tools. Layout, color, and structure are yours to shape.', patternMinimal: 'Minimal', patternAfterHours: 'After hours', patternBright: 'Bright & bold',
   seeFeels: 'See how it feels', why: 'Why Pexiloq', quiet: 'A quieter way to share what makes you, you.', lessNoise: 'Less noise. More of the things you actually want people to find.',
   together: 'Your world, together', togetherText: 'Links, work, and the ideas behind it. One thoughtful home for everything you want to share.',
   yours: 'Make it unmistakably yours', yoursText: 'Quietly minimal or full of color. Shape a page that feels like an extension of you.',
@@ -93,6 +94,7 @@ const translations: Record<Language, Dictionary> = {
   ja: {
     ...en, language: '言語', home: 'ホーム', features: '機能', howItWorks: '使い方', explore: 'プロフィールを見る', login: 'ログイン', create: 'Pexiloqを作成',
     heroKicker: 'あなたの世界のホーム', heroTitle: 'あなたが共有するすべてを、ひとつの場所に。', heroBody: 'リンク、プロジェクト、プロフィールなど、あなたを表すすべてを美しくまとめます。',
+    patternsHeading: 'あなたらしさの、3つのかたち。', patternsBody: 'どのPexiloqページも、同じ道具から生まれます。レイアウトも色も構成も、自由に選べます。', patternMinimal: 'ミニマル', patternAfterHours: 'アフターアワーズ', patternBright: '明るく大胆に',
     seeFeels: '雰囲気を見る', why: 'Pexiloqの理由', quiet: 'あなたらしさを、静かに伝える方法。', lessNoise: 'ノイズを減らして、見つけてほしいものを。',
     together: 'あなたの世界をひとつに', togetherText: 'リンク、作品、そこから生まれるアイデアを、共有したいすべてのための場所に。',
     yours: 'あなたらしく整える', yoursText: '静かにミニマルにも、色鮮やかにも。あなたの延長線のようなページを作れます。',
@@ -168,6 +170,7 @@ const translations: Record<Language, Dictionary> = {
   zh: {
     ...en, language: '语言', home: '首页', features: '功能', howItWorks: '使用方法', explore: '探索个人主页', login: '登录', create: '创建 Pexiloq',
     heroKicker: '你的世界之家', heroTitle: '你分享的一切，都在一个地方。', heroBody: '将链接、项目、个人资料，以及代表你的一切优雅地汇集在一起。',
+    patternsHeading: '三种方式，展现真正的你。', patternsBody: '每个 Pexiloq 页面都从同样的工具出发。布局、色彩与结构，完全由你决定。', patternMinimal: '简约', patternAfterHours: '深夜风格', patternBright: '明亮大胆',
     seeFeels: '看看效果', why: '为什么选择 Pexiloq', quiet: '更安静地分享真实的你。', lessNoise: '少一点噪音，多一点你想被找到的东西。',
     together: '把世界放在一起', togetherText: '链接、作品与背后的想法，都安放于一处。',
     yours: '让它变成你的风格', yoursText: '安静极简，或色彩丰富。打造一个仿佛自己延伸的页面。',
@@ -243,6 +246,7 @@ const translations: Record<Language, Dictionary> = {
   ko: {
     ...en, language: '언어', home: '홈', features: '기능', howItWorks: '사용 방법', explore: '프로필 둘러보기', login: '로그인', create: 'Pexiloq 만들기',
     heroKicker: '당신의 세계를 위한 공간', heroTitle: '공유하는 모든 것을 한곳에.', heroBody: '링크, 프로젝트, 프로필과 당신을 표현하는 모든 것을 아름답게 모아보세요.',
+    patternsHeading: '당신다움을 담는 세 가지 방식.', patternsBody: '모든 Pexiloq 페이지는 같은 도구에서 시작됩니다. 레이아웃, 색상, 구성 모두 자유롭게 정할 수 있어요.', patternMinimal: '미니멀', patternAfterHours: '애프터 아워', patternBright: '밝고 대담하게',
     seeFeels: '살펴보기', why: 'Pexiloq를 쓰는 이유', quiet: '나를 보여주는 더 조용한 방법.', lessNoise: '노이즈를 줄이고, 찾아주길 원하는 것만.',
     together: '당신의 세계를 하나로', togetherText: '링크, 작업, 그리고 그 뒤의 아이디어를 한곳에 모아 보세요.',
     yours: '온전히 당신답게', yoursText: '잔잔하고 미니멀하게, 혹은 알록달록하게. 당신의 연장선 같은 페이지를 만드세요.',
@@ -318,6 +322,7 @@ const translations: Record<Language, Dictionary> = {
   es: {
     ...en, language: 'Idioma', home: 'Inicio', features: 'Funciones', howItWorks: 'Cómo funciona', explore: 'Explorar perfiles', login: 'Iniciar sesión', create: 'Crea tu Pexiloq',
     heroKicker: 'Un hogar para tu mundo', heroTitle: 'Todo lo que compartes, en un solo lugar.', heroBody: 'Tus enlaces, proyectos y perfiles, reunidos con belleza.',
+    patternsHeading: 'Tres formas de hacerlo tuyo.', patternsBody: 'Cada página de Pexiloq parte de las mismas herramientas. El diseño, el color y la estructura son tuyos para dar forma.', patternMinimal: 'Minimalista', patternAfterHours: 'Nocturno', patternBright: 'Brillante y audaz',
     seeFeels: 'Descubre cómo se siente', why: 'Por qué Pexiloq', quiet: 'Una forma más silenciosa de mostrar quién eres.', lessNoise: 'Menos ruido, más de lo que realmente quieres que encuentren.',
     together: 'Tu mundo, junto', togetherText: 'Enlaces, trabajo e ideas en un solo lugar.',
     yours: 'Hazlo inconfundiblemente tuyo', yoursText: 'Minimalista o lleno de color. Crea una página que se sienta como una extensión tuya.',
@@ -393,6 +398,7 @@ const translations: Record<Language, Dictionary> = {
   fr: {
     ...en, language: 'Langue', home: 'Accueil', features: 'Fonctionnalités', howItWorks: 'Comment ça marche', explore: 'Explorer les profils', login: 'Se connecter', create: 'Créer votre Pexiloq',
     heroKicker: 'Un espace pour votre monde', heroTitle: 'Tout ce que vous partagez, au même endroit.', heroBody: 'Liens, projets et profils, réunis avec élégance.',
+    patternsHeading: 'Trois façons de la faire vôtre.', patternsBody: 'Chaque page Pexiloq part des mêmes outils. La mise en page, la couleur et la structure sont à vous de façonner.', patternMinimal: 'Minimaliste', patternAfterHours: 'Nocturne', patternBright: 'Vif et audacieux',
     seeFeels: 'Découvrez la sensation', why: 'Pourquoi Pexiloq', quiet: 'Une façon plus douce de partager ce qui fait de vous, vous.', lessNoise: 'Moins de bruit, plus de choses que vous voulez vraiment faire découvrir.',
     together: 'Votre monde, ensemble', togetherText: 'Liens, travaux et idées derrière, tout au même endroit.',
     yours: 'Rendez-le indéniablement vôtre', yoursText: 'Minimaliste ou plein de couleurs. Une page comme une extension de vous.',
@@ -468,6 +474,7 @@ const translations: Record<Language, Dictionary> = {
   de: {
     ...en, language: 'Sprache', home: 'Startseite', features: 'Funktionen', howItWorks: 'So funktioniert es', explore: 'Profile entdecken', login: 'Anmelden', create: 'Pexiloq erstellen',
     heroKicker: 'Ein Zuhause für deine Welt', heroTitle: 'Alles, was du teilst, an einem Ort.', heroBody: 'Links, Projekte und Profile, wunderschön vereint.',
+    patternsHeading: 'Drei Wege, sie zu deiner eigenen zu machen.', patternsBody: 'Jede Pexiloq-Seite beginnt mit denselben Werkzeugen. Layout, Farbe und Struktur gestaltest du selbst.', patternMinimal: 'Minimalistisch', patternAfterHours: 'Nachtschwärmer', patternBright: 'Hell und mutig',
     seeFeels: 'Sieh, wie es sich anfühlt', why: 'Warum Pexiloq', quiet: 'Eine ruhigere Art zu zeigen, wer du bist.', lessNoise: 'Weniger Lärm, mehr von dem, was die Leute wirklich finden sollen.',
     together: 'Deine Welt, vereint', togetherText: 'Links, Arbeiten und Ideen an einem Ort.',
     yours: 'Mach es unverkennbar zu deinem', yoursText: 'Minimal oder voller Farbe. Eine Seite, die sich wie eine Erweiterung von dir anfühlt.',
@@ -543,6 +550,7 @@ const translations: Record<Language, Dictionary> = {
   pt: {
     ...en, language: 'Idioma', home: 'Início', features: 'Recursos', howItWorks: 'Como funciona', explore: 'Explorar perfis', login: 'Entrar', create: 'Criar seu Pexiloq',
     heroKicker: 'Um lar para o seu mundo', heroTitle: 'Tudo o que você compartilha, em um só lugar.', heroBody: 'Links, projetos e perfis, reunidos com elegância.',
+    patternsHeading: 'Três formas de deixar do seu jeito.', patternsBody: 'Toda página Pexiloq começa com as mesmas ferramentas. Layout, cor e estrutura são seus para moldar.', patternMinimal: 'Minimalista', patternAfterHours: 'Noturno', patternBright: 'Vibrante e ousado',
     seeFeels: 'Veja como é', why: 'Por que Pexiloq', quiet: 'Uma forma mais tranquila de mostrar quem você é.', lessNoise: 'Menos ruído, mais do que você realmente quer ser encontrado.',
     together: 'Seu mundo, junto', togetherText: 'Links, trabalhos e ideias em um só lugar.',
     yours: 'Torne-o inconfundivelmente seu', yoursText: 'Minimalista ou cheio de cores. Uma página que parece uma extensão de você.',
@@ -618,6 +626,7 @@ const translations: Record<Language, Dictionary> = {
   hi: {
     ...en, language: 'भाषा', home: 'होम', features: 'विशेषताएँ', howItWorks: 'यह कैसे काम करता है', explore: 'प्रोफ़ाइल देखें', login: 'लॉग इन', create: 'अपना Pexiloq बनाएं',
     heroKicker: 'आपकी दुनिया का घर', heroTitle: 'आप जो भी साझा करते हैं, एक जगह।', heroBody: 'लिंक, प्रोजेक्ट, प्रोफ़ाइल और आपको दर्शाने वाली हर चीज़, सुंदर ढंग से एक जगह।',
+    patternsHeading: 'इसे अपना बनाने के तीन तरीके।', patternsBody: 'हर Pexiloq पेज एक जैसे टूल्स से शुरू होता है। लेआउट, रंग और संरचना — सब कुछ आपके हाथ में।', patternMinimal: 'न्यूनतम', patternAfterHours: 'आफ्टर आवर्स', patternBright: 'चमकीला और बोल्ड',
     seeFeels: 'अनुभव देखें', why: 'Pexiloq क्यों', quiet: 'आपको दर्शाने का एक शांत तरीका।', lessNoise: 'कम शोर, ज़्यादा वो चीज़ें जो आप चाहते हैं कि लोग ढूँढें।',
     together: 'आपकी दुनिया, एक साथ', togetherText: 'लिंक, काम और उसके पीछे के विचार, सब एक जगह।',
     yours: 'इसे बनाइए पूरी तरह अपना', yoursText: 'शांत और सादा, या रंगों से भरा। ऐसा पृष्ठ बनाएं जो आपका ही विस्तार लगे।',

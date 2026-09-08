@@ -1,13 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowUpRight, Check, Copy, ExternalLink, Menu, Play, Sparkles, X } from 'lucide-react'
+import { ArrowUpRight, Menu, Play, Sparkles, X } from 'lucide-react'
 import { useState } from 'react'
 import { LanguageSwitcher, useI18n } from '@/components/i18n-provider'
-import { fallbackTemplate, useAuth } from '@/components/pexiloq-app'
-import { siteHost } from '@/lib/site'
-
-const linkIcons = ['✦', '▶', '◎']
+import { PhonePreviewFrame, ProfileCard, showcaseTemplates, useAuth, type ShowcaseStyle } from '@/components/pexiloq-app'
 
 const features = [
   { title: 'together', text: 'togetherText', mark: '01' },
@@ -15,18 +12,14 @@ const features = [
   { title: 'next', text: 'nextText', mark: '03' },
 ]
 
+const patternLabelKey: Record<ShowcaseStyle, string> = { minimal: 'patternMinimal', afterHours: 'patternAfterHours', bright: 'patternBright' }
+
 export default function Page() {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [copied, setCopied] = useState(false)
   const { t, language } = useI18n()
   const { user, loading: authLoading } = useAuth()
-  const template = fallbackTemplate(language)
-
-  const copyProfile = async () => {
-    await navigator.clipboard?.writeText(`${siteHost}/amira`)
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 1800)
-  }
+  const showcase = showcaseTemplates(language)
+  const hero = showcase[0]
 
   return (
     <main className="min-h-screen overflow-hidden bg-background text-foreground">
@@ -60,16 +53,31 @@ export default function Page() {
           <p className="mt-9 max-w-[500px] text-pretty text-lg leading-8 text-muted-foreground">{t('heroBody')}</p>
           <div className="mt-10 flex flex-wrap items-center gap-4"><Link href={user ? '/dashboard' : '/signup'} className="rounded-full bg-primary px-6 py-4 text-sm font-medium text-primary-foreground transition-transform hover:-translate-y-0.5">{user ? t('workspace') : t('create')} <ArrowUpRight className="ml-2 inline size-4" /></Link><Link href="#profiles" className="group flex items-center gap-2 px-2 py-4 text-sm font-medium text-muted-foreground">{t('seeFeels')} <span className="transition-transform group-hover:translate-x-1">→</span></Link></div>
         </div>
-        <div id="profiles" className="relative lg:pl-8">
-          <div className="relative mx-auto max-w-[510px] rotate-[2.5deg] rounded-[2rem] border border-border bg-card p-4 shadow-[0_28px_80px_rgba(35,35,30,0.12)] transition-transform duration-500 hover:rotate-0 sm:p-6">
-            <div className="flex items-center justify-between border-b border-border pb-4 text-[10px] uppercase tracking-[0.18em] text-muted-foreground"><span>{siteHost} / {template.profile.username}</span><button onClick={copyProfile} className="flex items-center gap-1.5 hover:text-primary" aria-label="Copy profile link">{copied ? <Check className="size-3" /> : <Copy className="size-3" />} {copied ? t('copied') : t('shareButton')}</button></div>
-            <div className="px-4 pb-6 pt-9 text-center sm:px-10"><div className="mx-auto grid size-20 place-items-center rounded-full bg-[#d8d2c5] text-2xl font-medium text-[#5a554c]">{template.profile.displayName.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}</div><h2 className="mt-5 text-2xl font-medium tracking-[-0.05em]">{template.profile.displayName}</h2><p className="mt-1 text-sm text-muted-foreground">{template.profile.headline}</p><p className="mx-auto mt-5 max-w-[310px] text-sm leading-6 text-muted-foreground">{template.profile.bio}</p>
-              <div className="mt-7 flex justify-center gap-4 text-xs font-medium text-muted-foreground" aria-label="Social profiles"><X className="size-4" /><span aria-hidden="true">ig</span><span aria-hidden="true">gh</span><span aria-hidden="true">in</span></div>
-              <div className="mt-8 space-y-3">{template.links.map((link, i) => <a key={link.id} href="#" className="group flex items-center justify-between rounded-xl border border-border bg-white px-4 py-4 text-left transition-all hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-sm"><span className="flex items-center gap-3"><span className="grid size-7 place-items-center rounded-lg bg-secondary text-xs text-[#74746d]">{linkIcons[i]}</span><span><span className="block text-sm font-medium">{link.title}</span><span className="mt-1 block text-[11px] text-muted-foreground">{link.url.replace(/^https?:\/\//, '').replace(/^www\./, '')} / pexiloq</span></span></span><ExternalLink className="size-4 text-[#b0b0a9] transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" /></a>)}</div>
-              <div className="mt-8 grid grid-cols-2 gap-3 text-left"><div className="h-24 rounded-xl bg-[#252525] p-3 text-[#f4f2ec]"><span className="text-[10px] uppercase tracking-widest text-muted-foreground">{t('selectedWork')}</span><p className="mt-7 text-sm font-medium">{template.projects[0]?.title}</p></div><div className="h-24 rounded-xl bg-[#d9e2dc] p-3 text-[#31423a]"><span className="text-[10px] uppercase tracking-widest text-[#6e8176]">{t('nowExploring')}</span><p className="mt-7 text-sm font-medium">{template.projects[1]?.title}</p></div></div>
-            </div><div className="flex items-center justify-center border-t border-border pt-4 text-[10px] text-muted-foreground">{t('made')} <span className="mx-1 font-semibold text-muted-foreground">pexiloq</span></div>
+        <div className="relative lg:pl-8">
+          <div className="relative mx-auto max-w-[380px] rotate-[2deg] transition-transform duration-500 hover:rotate-0">
+            <PhonePreviewFrame profile={hero.bundle.profile}>
+              <ProfileCard profile={hero.bundle.profile} links={hero.bundle.links} projects={hero.bundle.projects} preview />
+            </PhonePreviewFrame>
           </div>
-          <div className="absolute -bottom-8 -left-2 hidden rounded-2xl border border-border bg-card px-4 py-3 text-xs shadow-[0_12px_35px_rgba(35,35,30,0.08)] sm:block"><Sparkles className="mr-2 inline size-3 text-[#a7926f]" /> {t('shareOneLink')}</div>
+          <div className="absolute -bottom-6 -left-2 hidden rounded-2xl border border-border bg-card px-4 py-3 text-xs shadow-[0_12px_35px_rgba(35,35,30,0.08)] sm:block"><Sparkles className="mr-2 inline size-3 text-[#a7926f]" /> {t('shareOneLink')}</div>
+        </div>
+      </section>
+
+      <section id="profiles" className="mx-auto max-w-[1320px] px-6 py-20 lg:px-10 lg:py-28">
+        <div className="mx-auto mb-14 max-w-[560px] text-center">
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{t('explore')}</p>
+          <h2 className="mt-4 text-4xl font-medium leading-tight tracking-[-0.06em] sm:text-5xl">{t('patternsHeading')}</h2>
+          <p className="mx-auto mt-4 max-w-[420px] text-sm leading-6 text-muted-foreground">{t('patternsBody')}</p>
+        </div>
+        <div className="grid gap-10 sm:grid-cols-3">
+          {showcase.map(({ style, bundle }) => (
+            <div key={style} className="flex flex-col items-center">
+              <PhonePreviewFrame profile={bundle.profile}>
+                <ProfileCard profile={bundle.profile} links={bundle.links} projects={bundle.projects} preview />
+              </PhonePreviewFrame>
+              <span className="mt-5 rounded-full border border-border bg-card px-4 py-1.5 text-xs font-medium text-muted-foreground">{t(patternLabelKey[style])}</span>
+            </div>
+          ))}
         </div>
       </section>
 

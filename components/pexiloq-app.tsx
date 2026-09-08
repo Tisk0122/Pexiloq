@@ -145,7 +145,7 @@ const emptyProfile: Profile = {
 }
 
 // Ensures profiles saved before layoutTemplate/sectionOrder existed still render correctly.
-function normalizeProfile(p: Partial<Profile>): Profile {
+export function normalizeProfile(p: Partial<Profile>): Profile {
   const merged: Profile = { ...emptyProfile, ...p }
   if (!layoutTemplates.includes(merged.layoutTemplate)) merged.layoutTemplate = 'classic'
   const validOrder = Array.isArray(merged.sectionOrder) && merged.sectionOrder.length
@@ -165,7 +165,7 @@ function normalizeProfile(p: Partial<Profile>): Profile {
   return merged
 }
 
-type TemplateBundle = { profile: Profile; links: LinkItem[]; projects: Project[] }
+export type TemplateBundle = { profile: Profile; links: LinkItem[]; projects: Project[] }
 function makeTemplate(headline: string, bio: string, links: [string, string, string], projects: { title: string; description: string; tech: [string, string] }[]): TemplateBundle {
   const urls = ['https://medium.com', 'https://youtube.com', 'https://instagram.com']
   return {
@@ -186,6 +186,84 @@ const langTemplates: Record<string, TemplateBundle> = {
   hi: makeTemplate('डिज़ाइनर, अच्छे विचारों की संग्रहकर्ता।', 'अधिक विचारशील इंटरनेट के लिए सौम्य उपकरण बना रही हूँ।', ['मेरे नवीनतम विचार पढ़ें', 'रचनात्मक प्रक्रिया', 'नमस्ते कहें'], [{ title: 'सॉफ़्ट सिस्टम', description: 'सौम्य डिजिटल उपकरणों का अध्ययन।', tech: ['उत्पाद डिज़ाइन', 'अनुसंधान'] }, { title: 'धीमा इंटरनेट', description: 'अधिक विचारशील वेब की खोज।', tech: ['लेखन', 'कला निर्देशन'] }]),
 }
 export function fallbackTemplate(lang?: string): TemplateBundle { return langTemplates[lang || 'en'] || langTemplates.en }
+
+// Content for the two extra showcase personas the landing page uses to demonstrate that
+// Pexiloq pages don't all look alike. Kept alongside langTemplates so every piece of sample
+// data the marketing site shows lives in one place.
+type PersonaCopy = { headline: string; bio: string; links: [string, string, string]; projects: [{ title: string; description: string }, { title: string; description: string }] }
+const showcaseCopy: Record<string, { kenji: PersonaCopy; noa: PersonaCopy }> = {
+  en: { kenji: { headline: 'DJ and sound designer. Always chasing the next set.', bio: 'New mixes most months, and a studio log for everything in between.', links: ['Latest mix', 'Behind the set', 'Book a show'], projects: [{ title: 'Afterglow EP', description: 'Six tracks recorded over one long summer.' }, { title: 'Live at Nord', description: "A full set from last month's show." }] }, noa: { headline: 'Photographer chasing soft light and quiet mornings.', bio: 'A visual diary of small towns, long walks, and the in-between moments.', links: ['Print shop', 'Behind the lens', 'Say hello'], projects: [{ title: 'Coastal light', description: 'A season spent photographing the shoreline.' }, { title: 'Quiet towns', description: 'Portraits of places most people pass by.' }] } },
+  ja: { kenji: { headline: 'DJ・サウンドデザイナー。次のセットをいつも追いかけて。', bio: 'ほぼ毎月新しいミックスを公開。制作の裏側もここに記録しています。', links: ['最新のミックス', 'セットの舞台裏', '出演依頼はこちら'], projects: [{ title: 'Afterglow EP', description: '長い夏に録音した6曲。' }, { title: 'Live at Nord', description: '先月のショーのフルセット。' }] }, noa: { headline: '柔らかな光と静かな朝を追いかける写真家。', bio: '小さな町や長い散歩、その間にある瞬間を記録する視覚的な日記。', links: ['プリントショップ', '撮影の裏側', 'ご連絡はこちら'], projects: [{ title: 'Coastal light', description: '海辺をひと夏かけて撮影した記録。' }, { title: 'Quiet towns', description: '多くの人が通り過ぎる場所の肖像。' }] } },
+  zh: { kenji: { headline: 'DJ 兼音效设计师。永远在追下一场演出。', bio: '几乎每月发布新混音，也记录制作背后的点滴。', links: ['最新混音', '幕后花絮', '预约演出'], projects: [{ title: 'Afterglow EP', description: '在漫长的一个夏天录制的六首曲目。' }, { title: 'Live at Nord', description: '上个月演出的完整现场。' }] }, noa: { headline: '追逐柔光与安静清晨的摄影师。', bio: '记录小镇、长途散步与那些间隙时刻的视觉日记。', links: ['版画商店', '镜头背后', '打个招呼'], projects: [{ title: 'Coastal light', description: '用一个季节拍摄的海岸线。' }, { title: 'Quiet towns', description: '那些常被忽略之地的肖像。' }] } },
+  ko: { kenji: { headline: 'DJ 겸 사운드 디자이너. 언제나 다음 세트를 좇습니다.', bio: '거의 매달 새 믹스를 공개하고, 작업 과정도 기록합니다.', links: ['최신 믹스', '세트 비하인드', '공연 문의'], projects: [{ title: 'Afterglow EP', description: '긴 여름 동안 녹음한 여섯 곡.' }, { title: 'Live at Nord', description: '지난달 공연의 풀 세트.' }] }, noa: { headline: '부드러운 빛과 고요한 아침을 좇는 사진가.', bio: '작은 마을과 긴 산책, 그 사이의 순간들을 담은 시각 일기.', links: ['프린트 숍', '촬영 비하인드', '인사하기'], projects: [{ title: 'Coastal light', description: '한 계절 동안 해안을 담은 기록.' }, { title: 'Quiet towns', description: '사람들이 스쳐 지나가는 장소의 초상.' }] } },
+  es: { kenji: { headline: 'DJ y diseñador de sonido. Siempre detrás del próximo set.', bio: 'Nuevas mezclas casi cada mes, y el detrás de escena del estudio.', links: ['Última mezcla', 'Detrás del set', 'Reservar una fecha'], projects: [{ title: 'Afterglow EP', description: 'Seis pistas grabadas durante un largo verano.' }, { title: 'Live at Nord', description: 'El set completo del show del mes pasado.' }] }, noa: { headline: 'Fotógrafa en busca de luz suave y mañanas tranquilas.', bio: 'Un diario visual de pueblos pequeños, caminatas largas y los momentos de en medio.', links: ['Tienda de impresiones', 'Detrás de la cámara', 'Saluda'], projects: [{ title: 'Coastal light', description: 'Una temporada fotografiando la costa.' }, { title: 'Quiet towns', description: 'Retratos de lugares que casi nadie mira.' }] } },
+  fr: { kenji: { headline: 'DJ et sound designer. Toujours à la recherche du prochain set.', bio: 'De nouveaux mixes presque chaque mois, et les coulisses du studio.', links: ['Dernier mix', 'Les coulisses', 'Réserver une date'], projects: [{ title: 'Afterglow EP', description: "Six titres enregistrés au fil d'un long été." }, { title: 'Live at Nord', description: 'Le set complet du concert du mois dernier.' }] }, noa: { headline: 'Photographe en quête de lumière douce et de matins calmes.', bio: 'Un journal visuel de petites villes, longues marches et instants entre deux.', links: ['Boutique de tirages', "Derrière l'objectif", 'Dites bonjour'], projects: [{ title: 'Coastal light', description: 'Une saison passée à photographier le littoral.' }, { title: 'Quiet towns', description: "Portraits de lieux que l'on ne remarque jamais." }] } },
+  de: { kenji: { headline: 'DJ und Sound-Designer. Immer auf dem Weg zum nächsten Set.', bio: 'Fast jeden Monat ein neuer Mix, plus Einblicke aus dem Studio.', links: ['Neuester Mix', 'Hinter dem Set', 'Auftritt buchen'], projects: [{ title: 'Afterglow EP', description: 'Sechs Tracks, aufgenommen über einen langen Sommer.' }, { title: 'Live at Nord', description: 'Das komplette Set vom letzten Auftritt.' }] }, noa: { headline: 'Fotografin auf der Suche nach sanftem Licht und stillen Morgen.', bio: 'Ein visuelles Tagebuch aus kleinen Städten, langen Spaziergängen und den Momenten dazwischen.', links: ['Print-Shop', 'Hinter der Kamera', 'Sag Hallo'], projects: [{ title: 'Coastal light', description: 'Eine Saison damit verbracht, die Küste zu fotografieren.' }, { title: 'Quiet towns', description: 'Porträts von Orten, an denen die meisten vorbeigehen.' }] } },
+  pt: { kenji: { headline: 'DJ e sound designer. Sempre atrás do próximo set.', bio: 'Novas mixagens quase todo mês, e os bastidores do estúdio.', links: ['Última mixagem', 'Bastidores do set', 'Reservar uma data'], projects: [{ title: 'Afterglow EP', description: 'Seis faixas gravadas ao longo de um longo verão.' }, { title: 'Live at Nord', description: 'O set completo do show do mês passado.' }] }, noa: { headline: 'Fotógrafa em busca de luz suave e manhãs tranquilas.', bio: 'Um diário visual de cidades pequenas, longas caminhadas e os momentos intermediários.', links: ['Loja de impressões', 'Por trás das lentes', 'Diga olá'], projects: [{ title: 'Coastal light', description: 'Uma estação inteira fotografando o litoral.' }, { title: 'Quiet towns', description: 'Retratos de lugares que quase todos ignoram.' }] } },
+  hi: { kenji: { headline: 'डीजे और साउंड डिज़ाइनर। हमेशा अगले सेट की तलाश में।', bio: 'लगभग हर महीने नया मिक्स, और स्टूडियो की झलकियाँ।', links: ['नवीनतम मिक्स', 'सेट के पीछे की कहानी', 'शो बुक करें'], projects: [{ title: 'Afterglow EP', description: 'एक लंबी गर्मी में रिकॉर्ड किए गए छह ट्रैक।' }, { title: 'Live at Nord', description: 'पिछले महीने के शो का पूरा सेट।' }] }, noa: { headline: 'मुलायम रोशनी और शांत सुबहों की तलाश करने वाली फ़ोटोग्राफ़र।', bio: 'छोटे कस्बों, लंबी सैर और बीच के पलों की एक दृश्य डायरी।', links: ['प्रिंट शॉप', 'लेंस के पीछे', 'नमस्ते कहें'], projects: [{ title: 'Coastal light', description: 'एक पूरा मौसम तटरेखा की फ़ोटोग्राफ़ी में बिताया।' }, { title: 'Quiet towns', description: 'उन जगहों के चित्र जिन्हें ज़्यादातर लोग बस गुज़र जाते हैं।' }] } },
+}
+
+function personaProfile(overrides: Partial<Profile>): Profile {
+  return normalizeProfile({
+    theme: 'light', buttonStyle: 'solid', cardRadius: '3xl', fontStyle: 'sans', backgroundStyle: 'default',
+    avatarShape: 'circle', avatarRing: true, showAvatar: true, showBadge: true, showLinkIcons: true, cardShadow: true,
+    spacing: 'cozy', socialStyle: 'outline', isPublic: true, onboarded: true, layoutTemplate: 'classic', twitterIcon: 'x',
+    ...overrides,
+  })
+}
+function personaLinks(titles: [string, string, string], urls: [string, string, string]): LinkItem[] {
+  return titles.map((title, i) => ({ id: String(i + 1), title, url: urls[i], visible: true }))
+}
+function personaProjects(items: [{ title: string; description: string }, { title: string; description: string }]): Project[] {
+  return items.map((p, i) => ({ id: String(i + 1), title: p.title, description: p.description, url: 'https://example.com', imageURL: '', technologies: [], visible: true }))
+}
+
+export type ShowcaseStyle = 'minimal' | 'afterHours' | 'bright'
+export type ShowcaseProfile = { style: ShowcaseStyle; bundle: TemplateBundle }
+
+// Three real, fully-rendered Pexiloq pages spanning the range of what the customization
+// options actually produce: the same classic light layout used in langTemplates, a dark
+// "magazine" layout with a gold accent, and a light "grid" layout on a soft gradient.
+// Every field here is a genuine Profile/LinkItem/Project — these render through the exact
+// same <ProfileCard> the dashboard and public pages use, nothing is faked for the marketing site.
+export function showcaseTemplates(lang?: string): ShowcaseProfile[] {
+  const l = lang && showcaseCopy[lang] ? lang : 'en'
+  const amira = langTemplates[l] || langTemplates.en
+  const c = showcaseCopy[l]
+  return [
+    {
+      style: 'minimal',
+      bundle: { ...amira, profile: { ...amira.profile, socials: { twitter: 'amira', instagram: 'amira.moss', github: 'amiramoss' } } },
+    },
+    {
+      style: 'afterHours',
+      bundle: {
+        profile: personaProfile({
+          username: 'kenji', displayName: 'Kenji Aoyama', headline: c.kenji.headline, bio: c.kenji.bio, website: '',
+          accentColor: '#c9a24b', theme: 'dark', backgroundStyle: 'default', backgroundColor: '#0f0f0d',
+          buttonStyle: 'outline', avatarShape: 'rounded', cardRadius: '2xl', spacing: 'cozy', socialStyle: 'filled',
+          layoutTemplate: 'magazine', socials: { twitter: 'kenjimixes', instagram: 'kenji.mixes', youtube: '@kenjimixes' },
+        }),
+        links: personaLinks(c.kenji.links, ['https://soundcloud.com', 'https://youtube.com', 'https://example.com']),
+        projects: personaProjects(c.kenji.projects),
+      },
+    },
+    {
+      style: 'bright',
+      bundle: {
+        profile: personaProfile({
+          username: 'noa', displayName: 'Noa Lindgren', headline: c.noa.headline, bio: c.noa.bio, website: '',
+          accentColor: '#d98aa0', theme: 'light', backgroundStyle: 'gradient',
+          backgroundGradient: 'radial-gradient(120% 120% at 0% 0%, #fde2e4 0%, transparent 60%), radial-gradient(130% 130% at 100% 100%, #e4f0fd 0%, transparent 60%)',
+          buttonStyle: 'solid', avatarShape: 'square', cardRadius: '3xl', spacing: 'spacious', socialStyle: 'outline',
+          layoutTemplate: 'grid', socials: { instagram: 'noa.frames', tiktok: '@noa.frames', youtube: '@noalindgren' },
+        }),
+        links: personaLinks(c.noa.links, ['https://example.com', 'https://instagram.com', 'https://example.com']),
+        projects: personaProjects(c.noa.projects),
+      },
+    },
+  ]
+}
 
 export function Logo() {
   return <Link href="/" className="flex shrink-0 items-center" aria-label="Pexiloq home"><img src="/Pexiloq_Logo.png" alt="Pexiloq" width={1774} height={887} className="h-14 w-auto object-contain sm:h-16 md:h-20 lg:h-24" /></Link>
@@ -2056,7 +2134,7 @@ const DESKTOP_CONTENT_WIDTH = 1280
 
 export type PreviewDevice = 'phone' | 'desktop'
 
-function PhonePreviewFrame({ profile, children }: { profile: Profile; children: React.ReactNode }) {
+export function PhonePreviewFrame({ profile, children }: { profile: Profile; children: React.ReactNode }) {
   const { ref: screenRef, width: screenWidth } = useElementSize<HTMLDivElement>()
   const { ref: contentRef, height: contentHeight } = useElementSize<HTMLDivElement>()
   const scale = screenWidth > 0 ? screenWidth / PHONE_CONTENT_WIDTH : 1
