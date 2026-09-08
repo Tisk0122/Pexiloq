@@ -6,6 +6,7 @@ import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState
 import { ArrowUpRight, Check, CircleAlert, Copy, ExternalLink, Eye, GripVertical, Layers, Link2, Loader2, LogOut, Menu, Monitor, Palette, Plus, Save, Settings, Smartphone, Trash2, Type, Upload, UserRound, X, ZoomIn, Zap } from 'lucide-react'
 import { auth, deleteAccount, firebaseEnabled, loadAnalytics, loadPublicBundle, loadUserBundle, recordAnalytics, saveItems, saveProfile } from '@/lib/firebase'
 import { LanguageSwitcher, useI18n } from '@/components/i18n-provider'
+import { siteHost } from '@/lib/site'
 import { deleteUser, EmailAuthProvider, GoogleAuthProvider, onAuthStateChanged, reauthenticateWithCredential, reauthenticateWithPopup, signOut } from 'firebase/auth'
 
 export type LinkDisplayStyle = 'default' | 'large' | 'thumbnail' | 'text'
@@ -192,7 +193,7 @@ export function Logo() {
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter(); const pathname = usePathname(); const [mobile, setMobile] = useState(false); const [loggingOut, setLoggingOut] = useState(false); const { t } = useI18n()
-  const { profile, loading } = useWorkspace()
+  const { profile, loading, uid } = useWorkspace()
   const nav = [
     { href: '/dashboard', label: t('overview'), icon: Eye },
     { href: '/dashboard/profile', label: t('profile'), icon: UserRound },
@@ -202,7 +203,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     { href: '/dashboard/settings', label: t('settings'), icon: Settings },
   ]
   async function logout() { setLoggingOut(true); if (auth) await signOut(auth); router.push('/') }
-  if (loading) return <LoadingScreen />
+  // The dashboard is a signed-in workspace — send anyone who isn't authenticated to
+  // /login instead of letting them sit on an empty-state version of someone else's
+  // editing UI. Skipped when Firebase isn't configured at all (no auth system to
+  // check against), matching how the auth form itself bypasses login in that mode.
+  const signedOut = !loading && firebaseEnabled && !uid
+  useEffect(() => {
+    if (signedOut) router.replace('/login')
+  }, [signedOut, router])
+  if (loading || signedOut) return <LoadingScreen />
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-40 flex items-center justify-between border-b bg-background/95 px-6 py-3.5 backdrop-blur-md lg:px-10">
@@ -211,7 +220,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           {profile.username && (
             <div className="hidden items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground md:flex">
               <span className="size-2 rounded-full" style={{ backgroundColor: profile.isPublic === false ? '#eab308' : '#22c55e' }} />
-              <span className="font-mono text-[11px]">pexiloq.vercel.app/{profile.username}</span>
+              <span className="font-mono text-[11px]">{siteHost}/{profile.username}</span>
             </div>
           )}
         </div>
@@ -742,23 +751,23 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
       )}
       <div className="p-5">
       <div className={`flex flex-wrap items-center justify-between gap-x-2 gap-y-2 border-b pb-3 text-[10px] uppercase tracking-[0.18em] ${skin.bar} ${skin.sub}`}>
-        <span className="min-w-0 truncate py-1">pexiloq.vercel.app / {profile.username}</span>
+        <span className="min-w-0 truncate py-1">{siteHost} / {profile.username}</span>
         <span className="flex shrink-0 items-center gap-1">
-          <button onClick={() => setShowQr((v) => !v)} aria-label={t('showQr')} aria-pressed={showQr} className={`-my-1 rounded-full px-2.5 py-2 transition ${showQr ? 'bg-secondary/80' : 'hover:bg-secondary/50'}`}>{t('qr')}</button>
-          <button onClick={share} aria-label={t('shareButton')} className="-my-1 flex items-center gap-1 rounded-full px-2.5 py-2 transition hover:bg-secondary/50">{copied ? <Check className="inline size-3" /> : <Copy className="inline size-3" />} {copied ? t('copied') : t('shareButton')}</button>
+          <button onClick={() => setShowQr((v) => !v)} aria-label={t('showQr')} aria-pressed={showQr} className={`-my-1 rounded-full px-2.5 py-2 transition ${showQr ? (dark ? 'bg-white/15' : 'bg-secondary/80') : dark ? 'hover:bg-white/10' : 'hover:bg-secondary/50'}`}>{t('qr')}</button>
+          <button onClick={share} aria-label={t('shareButton')} className={`-my-1 flex items-center gap-1 rounded-full px-2.5 py-2 transition ${dark ? 'hover:bg-white/10' : 'hover:bg-secondary/50'}`}>{copied ? <Check className="inline size-3" /> : <Copy className="inline size-3" />} {copied ? t('copied') : t('shareButton')}</button>
         </span>
       </div>
       {showQr && !preview && (
         <div className="flex flex-col items-center gap-3 border-b pb-6 pt-6 text-center">
-          <img src={qrCodeFor(`https://${typeof window !== 'undefined' ? window.location.host : 'pexiloq.vercel.app'}/${profile.username}`)} alt={t('qr')} width={160} height={160} className="rounded-xl border" />
-          <a href={qrCodeFor(`https://${typeof window !== 'undefined' ? window.location.host : 'pexiloq.vercel.app'}/${profile.username}`, 512)} download={`${profile.username}-pexiloq-qr.png`} target="_blank" rel="noreferrer" className="text-xs underline underline-offset-4" style={{ color: profile.accentColor }}>{t('downloadQr')}</a>
+          <img src={qrCodeFor(`https://${typeof window !== 'undefined' ? window.location.host : siteHost}/${profile.username}`)} alt={t('qr')} width={160} height={160} className="rounded-xl border" />
+          <a href={qrCodeFor(`https://${typeof window !== 'undefined' ? window.location.host : siteHost}/${profile.username}`, 512)} download={`${profile.username}-pexiloq-qr.png`} target="_blank" rel="noreferrer" className="text-xs underline underline-offset-4" style={{ color: profile.accentColor }}>{t('downloadQr')}</a>
         </div>
       )}
       <div className={`px-2 py-8 sm:px-8 ${isNameCard ? 'text-left sm:flex sm:items-start sm:gap-8' : 'text-center'} ${profile.coverImageURL ? '-mt-8' : ''}`}>
         <div className={isNameCard ? 'sm:w-64 sm:shrink-0 sm:text-left text-center' : ''}>
           {profile.showAvatar && (
             <div
-              className={`${isNameCard ? 'mx-auto sm:mx-0' : 'mx-auto'} ${profile.coverImageURL ? '-mt-2' : ''} relative grid size-20 place-items-center overflow-hidden bg-secondary text-xl font-medium ${avatarShapeClass[profile.avatarShape]} ${profile.avatarAnimation === 'pulse' ? 'pexiloq-avatar-pulse' : ''} ${profile.avatarAnimation === 'spin' ? 'pexiloq-avatar-spin' : ''} ${profile.avatarAnimation === 'glow' ? 'pexiloq-avatar-glow' : ''}`}
+              className={`${isNameCard ? 'mx-auto sm:mx-0' : 'mx-auto'} ${profile.coverImageURL ? '-mt-2' : ''} relative grid size-20 place-items-center overflow-hidden text-xl font-medium ${dark ? 'bg-white/10 text-[#f5f5f2]' : 'bg-secondary text-[#151515]'} ${avatarShapeClass[profile.avatarShape]} ${profile.avatarAnimation === 'pulse' ? 'pexiloq-avatar-pulse' : ''} ${profile.avatarAnimation === 'spin' ? 'pexiloq-avatar-spin' : ''} ${profile.avatarAnimation === 'glow' ? 'pexiloq-avatar-glow' : ''}`}
               style={{
                 // The ring always derives from the profile's own accent color, never a fixed
                 // hue, so it can't clash with a brand-colored avatar. A themed background
@@ -779,7 +788,7 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
               </span>
             )}
           </h1>
-          <p className={`mt-2 text-sm ${skin.sub}`}>{profile.headline}</p>
+          {profile.headline && <p className={`mt-2 text-sm ${skin.sub}`}>{profile.headline}</p>}
           {profile.bio && <p className={`mt-5 text-sm leading-6 ${skin.sub} ${isNameCard ? 'sm:max-w-none' : 'mx-auto max-w-sm'}`}>{profile.bio}</p>}
           {profile.website && <a href={profile.website} target="_blank" className="mt-4 inline-block text-xs underline underline-offset-4" style={{ color: profile.accentColor }}>{profile.website.replace(/^https?:\/\//, '')}</a>}
           {Object.entries(profile.socials || {}).filter(([, v]) => v).length > 0 && (
@@ -796,7 +805,7 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
           {sectionOrder.map((key) => <div key={key}>{sections[key]}</div>)}
         </div>
       </div>
-      {profile.showBadge && <div className={`border-t pt-4 text-center text-[10px] ${skin.bar} ${skin.sub}`}>{t('made')} <span className="font-semibold text-foreground">pexiloq</span></div>}
+      {profile.showBadge && <div className={`border-t pt-4 text-center text-[10px] ${skin.bar} ${skin.sub}`}>{t('made')} <span className={`font-semibold ${dark ? 'text-[#f5f5f2]' : 'text-[#151515]'}`}>pexiloq</span></div>}
       </div>
     </div>
   )
@@ -908,8 +917,8 @@ export function Overview() {
             </div>
           </div>
           <div className="mt-8 rounded-xl border bg-card p-4 text-xs text-muted-foreground">
-            <p className="font-semibold text-foreground">Pro tip</p>
-            <p className="mt-1 leading-relaxed">Customize your cover image and profile layout in Appearance to make your Pexiloq instantly stand out.</p>
+            <p className="font-semibold text-foreground">{t('proTip')}</p>
+            <p className="mt-1 leading-relaxed">{t('proTipBody')}</p>
           </div>
         </div>
       </section>
@@ -1018,7 +1027,7 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('stepBasics')}</p>
               <div className="mt-4 space-y-4">
                 <Field label={t('displayName')} value={draftProfile.displayName} onChange={(v) => setDraftProfile({ ...draftProfile, displayName: v })} placeholder="e.g. Amira Moss" />
-                <Field label={t('username')} value={draftProfile.username} onChange={(v) => setDraftProfile({ ...draftProfile, username: v.toLowerCase().replace(/[^a-z0-9-]/g, '') })} prefix="pexiloq.vercel.app/" placeholder="username" />
+                <Field label={t('username')} value={draftProfile.username} onChange={(v) => setDraftProfile({ ...draftProfile, username: v.toLowerCase().replace(/[^a-z0-9-]/g, '') })} prefix={`${siteHost}/`} placeholder="username" />
               </div>
             </div>
 
@@ -1554,7 +1563,7 @@ function Onboarding() {
         {step === 0 && (
           <div className="mt-6 space-y-4">
             <Field label={t('displayName')} value={draft.displayName} onChange={(v) => setField({ displayName: v })} />
-            <Field label={t('username')} value={draft.username} prefix="pexiloq.vercel.app/" onChange={(v) => setField({ username: v.toLowerCase().replace(/[^a-z0-9-]/g, '') })} />
+            <Field label={t('username')} value={draft.username} prefix={`${siteHost}/`} onChange={(v) => setField({ username: v.toLowerCase().replace(/[^a-z0-9-]/g, '') })} />
             <Field label={t('headline')} value={draft.headline} onChange={(v) => setField({ headline: v })} />
           </div>
         )}
@@ -1642,6 +1651,17 @@ function Field({ label, value, onChange, area, prefix, placeholder }: { label: s
 const R2_MAX_BYTES = 10 * 1024 * 1024
 const IMAGE_QUALITY = 0.82
 
+// Fetches a fresh Firebase ID token for the signed-in user, if any. Sent alongside
+// userId on every /api/upload request so the server can confirm the caller really
+// is the account it claims to be acting as, rather than trusting the uid at face value.
+async function getIdToken(): Promise<string | null> {
+  try {
+    return (await auth?.currentUser?.getIdToken()) || null
+  } catch {
+    return null
+  }
+}
+
 // Best-effort cleanup: removes a previously uploaded image from R2 once it's no longer
 // referenced anywhere (replaced by a new upload, removed by the user, or its owning link/
 // project/account was deleted). Silently no-ops on externally hosted URLs or if the
@@ -1649,16 +1669,19 @@ const IMAGE_QUALITY = 0.82
 async function deleteStoredImage(uid: string | null | undefined, url?: string | null) {
   if (!uid || !url) return
   try {
-    await fetch('/api/upload', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: uid, url }) })
+    const idToken = await getIdToken()
+    await fetch('/api/upload', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: uid, url, idToken }) })
   } catch { /* best effort */ }
 }
 
 // Deletes every image ever uploaded for this account. Called when the account itself is
 // deleted so avatars, cover/background images, and link/project thumbnails don't linger
-// in storage after the profile is gone.
-async function purgeAllStoredImages(uid: string) {
+// in storage after the profile is gone. idToken must be captured *before* the Firebase Auth
+// account is deleted (see SettingsPage.removeAccount) — once the account is gone there's no
+// user left to mint a fresh token from.
+async function purgeAllStoredImages(uid: string, idToken?: string | null) {
   try {
-    await fetch('/api/upload', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: uid, purgeAll: true }) })
+    await fetch('/api/upload', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: uid, purgeAll: true, idToken }) })
   } catch { /* best effort */ }
 }
 
@@ -1917,10 +1940,11 @@ function ImageUploader({ uid, onUploaded, label, accept = 'image/*', className =
     setError('')
     try {
       setPhase('upload')
+      const idToken = await getIdToken()
       const res = await fetch('/api/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: uid, contentType, size: uploadFile.size }),
+        body: JSON.stringify({ userId: uid, contentType, size: uploadFile.size, idToken }),
       })
       const data = await res.json().catch(() => null)
       if (!res.ok) throw new Error(data?.error || 'upload error')
@@ -2061,7 +2085,7 @@ function DesktopPreviewFrame({ profile, children }: { profile: Profile; children
   const { ref: contentRef, height: contentHeight } = useElementSize<HTMLDivElement>()
   const scale = screenWidth > 0 ? screenWidth / DESKTOP_CONTENT_WIDTH : 1
   const skin = profile.theme === 'dark' ? 'bg-[#20221f] text-[#f5f5f2]' : 'bg-background text-foreground'
-  const url = `pexiloq.vercel.app/${profile.username || ''}`
+  const url = `${siteHost}/${profile.username || ''}`
   return (
     <div className="pexiloq-desktop-frame">
       <div className="pexiloq-desktop-shell">
@@ -2144,11 +2168,14 @@ export function SettingsPage() {
     const user = auth?.currentUser
     if (!user) { router.push('/'); return }
     const uidToPurge = user.uid
+    // Must grab the token before deleteUser() below signs the account out —
+    // afterwards there's no user left to mint a fresh ID token from.
+    const idToken = await getIdToken()
     await deleteUser(user)
     try { await deleteAccount(uidToPurge) } catch { /* account gone; best effort cleanup */ }
     // Also clear out every avatar/cover/background/link/project image ever uploaded for
     // this account so nothing is left behind in R2 once the profile itself is gone.
-    void purgeAllStoredImages(uidToPurge)
+    void purgeAllStoredImages(uidToPurge, idToken)
     router.push('/')
   }
   async function confirmDelete() {
@@ -2182,7 +2209,7 @@ export function SettingsPage() {
       <PageHeader eyebrow={t('accountLabel')} title={t('settings')} description={t('settingsDesc')} />
       <div className="max-w-2xl rounded-2xl border bg-card p-6">
         <p className="text-sm font-medium">{t('publicUrl')}</p>
-        <p className="mt-2 text-sm text-muted-foreground">pexiloq.vercel.app/{profile.username}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{siteHost}/{profile.username}</p>
         <div className="my-8 border-t" />
         <p className="text-sm font-medium">{t('stepPrivacy')}</p>
         <p className="mt-2 text-sm text-muted-foreground">{profile.isPublic === false ? t('privateProfileText') : t('publicProfileText')}</p>
@@ -2270,6 +2297,7 @@ function shouldRecordView(uid: string) {
 
 export function PublicProfile({ username }: { username?: string }) {
   const { t } = useI18n()
+  const { user } = useAuth()
   const [data, setData] = useState<{ profile: Profile; links: LinkItem[]; projects: Project[] } | null | 'missing'>(null)
   const viewRecorded = useRef<string | null>(null)
   const lastClick = useRef<string | null>(null)
@@ -2318,13 +2346,13 @@ export function PublicProfile({ username }: { username?: string }) {
     <main className={`relative min-h-screen px-5 py-8 ${skin} ${animated ? 'pexiloq-animated-gradient' : ''}`} style={pageStyle}>
       {overlay && loaded && <div className="pointer-events-none absolute inset-0" style={{ backgroundColor: loaded.profile.theme === 'dark' ? '#000000' : '#ffffff', opacity: Math.min(Math.max(loaded.profile.backgroundOverlay, 0), 1) }} />}
       <div className="relative mx-auto max-w-2xl">
-        <div className="flex flex-wrap items-center justify-between gap-3"><Logo /><Link href="/dashboard" className="whitespace-nowrap rounded-full border px-4 py-2 text-xs">{t('createYours')} <ArrowUpRight className="ml-1 inline size-3" /></Link></div>
+        <div className="flex flex-wrap items-center justify-between gap-3"><Logo /><Link href={user ? '/dashboard' : '/signup'} className="whitespace-nowrap rounded-full border px-4 py-2 text-xs">{t('createYours')} <ArrowUpRight className="ml-1 inline size-3" /></Link></div>
         {data === 'missing' && <div className="mt-16 rounded-2xl border bg-card p-10 text-center"><p className="text-lg font-medium">{t('notFound')}</p></div>}
         {loaded && !loaded.profile.isPublic && (
           <div className="mt-16 rounded-2xl border bg-card p-10 text-center">
             <p className="text-lg font-medium">{t('privateNotice')}</p>
             <p className="mt-2 text-sm text-muted-foreground">{t('privateProfileText')}</p>
-            <Link href="/dashboard" className="mt-6 inline-flex items-center gap-1 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground">{t('publishNow')} <ArrowUpRight className="size-4" /></Link>
+            <Link href={user ? '/dashboard' : '/signup'} className="mt-6 inline-flex items-center gap-1 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground">{t('publishNow')} <ArrowUpRight className="size-4" /></Link>
           </div>
         )}
         {loaded && loaded.profile.isPublic && (

@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowUpRight, Globe2, Loader2 } from 'lucide-react'
 import { auth, firebaseEnabled, loadProfileByUsername, saveProfile } from '@/lib/firebase'
 import { LanguageSwitcher, useI18n, type Language } from '@/components/i18n-provider'
 import { LegalDialog } from '@/components/legal-content'
+import { siteHost } from '@/lib/site'
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth'
 
 const copy: Record<Language, Record<string, string>> = {
@@ -70,7 +71,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
           <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground/80">pexiloq / {mode}</p>
           <p className="mt-20 max-w-sm text-3xl font-medium leading-snug tracking-[-0.05em]">{mode === 'login' ? c.loginBody : c.signupBody}</p>
           <div className="mt-16 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            <Globe2 className="size-4" />pexiloq.vercel.app
+            <Globe2 className="size-4" />{siteHost}
           </div>
         </div>
         <div className="mx-auto w-full max-w-md">

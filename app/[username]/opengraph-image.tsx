@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import sharp from 'sharp'
 import { loadPublicProfileMeta } from '@/lib/firebase-server'
+import { siteHost } from '@/lib/site'
 
 export const runtime = 'nodejs'
 export const revalidate = 300 // regenerate at most every 5 minutes per profile
@@ -191,7 +192,7 @@ export default async function OpengraphImage({ params }: { params: Promise<{ use
   const avatarRadius = meta?.avatarShape === 'square' ? '0' : meta?.avatarShape === 'rounded' ? '40px' : '9999px'
   const initials = initialsOf(displayName)
 
-  const allText = `${displayName} @${username} ${headline} pexiloq.vercel.app ${initials}`
+  const allText = `${displayName} @${username} ${headline} ${siteHost} ${initials}`
 
   // Fonts are a local disk read (fast, no external failure mode) so they're
   // awaited on their own rather than racing against the network-bound image
@@ -323,7 +324,7 @@ export default async function OpengraphImage({ params }: { params: Promise<{ use
             <img src={logo} alt="" width={40} height={40} style={{ width: 40, height: 40, borderRadius: 10 }} />
           )}
           <div style={{ display: 'flex', fontSize: 24, fontWeight: 600, color: cover ? 'rgba(255,255,255,0.92)' : BRAND_INK, letterSpacing: '-0.02em' }}>
-            pexiloq.vercel.app
+            {siteHost}
           </div>
         </div>
       </div>

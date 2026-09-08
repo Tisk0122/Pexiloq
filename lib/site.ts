@@ -11,6 +11,12 @@ function resolveSiteUrl() {
 }
 
 export const siteUrl = resolveSiteUrl()
+// Bare host (no protocol) derived from the same siteUrl, e.g. "pexiloq.vercel.app".
+// Use this instead of hardcoding the domain anywhere it's shown to users (share
+// labels, QR codes, copy-link buttons, OG image text) so a future domain change
+// only ever has to happen in one place — see git history for the last time the
+// domain moved and every hardcoded copy of it had to be tracked down by hand.
+export const siteHost = siteUrl.replace(/^https?:\/\//, '')
 export const siteName = 'Pexiloq'
 export const defaultTitle = 'Pexiloq — Everything you share, in one place.'
 export const defaultDescription = 'Create a beautiful personal home for your links, projects, and everything that represents you.'

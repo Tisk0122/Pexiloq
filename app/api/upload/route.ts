@@ -2,12 +2,25 @@ import { NextResponse } from 'next/server'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { deleteAllObjectsForUser, deleteObject, getS3, keyFromPublicUrl, publicUrlFor, r2Config } from '@/lib/r2'
+import { firebaseEnabled } from '@/lib/firebase-app'
+import { verifyIdToken } from '@/lib/auth-server'
 
 export const runtime = 'nodejs'
 
 export const maxBytes = 10 * 1024 * 1024
 
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'svg', 'heic']
+
+// Confirms the request's idToken really belongs to the userId it claims to act
+// as, so one signed-in user can't upload/delete files under another user's
+// storage prefix just by naming their uid in the request body. When Firebase
+// isn't configured at all (local/demo use with no auth system), this is
+// skipped — there's nothing to verify against and no real accounts to protect.
+async function assertOwnsUser(idToken: unknown, userId: string): Promise<boolean> {
+  if (!firebaseEnabled) return true
+  const verifiedUid = await verifyIdToken(idToken)
+  return Boolean(verifiedUid) && verifiedUid === userId
+}
 
 export async function GET() {
   return NextResponse.json({ configured: r2Config().configured, maxBytes })
@@ -23,6 +36,9 @@ export async function POST(req: Request) {
   const size: number = body?.size
   if (!userId || typeof userId !== 'string') {
     return NextResponse.json({ error: 'Missing userId.' }, { status: 400 })
+  }
+  if (!(await assertOwnsUser(body?.idToken, userId))) {
+    return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
   }
   if (!contentType.startsWith('image/')) {
     return NextResponse.json({ error: 'Only image files are allowed.' }, { status: 400 })
@@ -61,6 +77,9 @@ export async function DELETE(req: Request) {
   const userId = body?.userId
   if (!userId || typeof userId !== 'string') {
     return NextResponse.json({ error: 'Missing userId.' }, { status: 400 })
+  }
+  if (!(await assertOwnsUser(body?.idToken, userId))) {
+    return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
   }
   const safeUserId = userId.replace(/[^a-zA-Z0-9_-]/g, '')
   try {

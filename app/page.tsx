@@ -5,6 +5,7 @@ import { ArrowUpRight, Check, Copy, ExternalLink, Menu, Play, Sparkles, X } from
 import { useState } from 'react'
 import { LanguageSwitcher, useI18n } from '@/components/i18n-provider'
 import { fallbackTemplate, useAuth } from '@/components/pexiloq-app'
+import { siteHost } from '@/lib/site'
 
 const linkIcons = ['✦', '▶', '◎']
 
@@ -22,7 +23,7 @@ export default function Page() {
   const template = fallbackTemplate(language)
 
   const copyProfile = async () => {
-    await navigator.clipboard?.writeText('pexiloq.vercel.app/amira')
+    await navigator.clipboard?.writeText(`${siteHost}/amira`)
     setCopied(true)
     window.setTimeout(() => setCopied(false), 1800)
   }
@@ -61,7 +62,7 @@ export default function Page() {
         </div>
         <div id="profiles" className="relative lg:pl-8">
           <div className="relative mx-auto max-w-[510px] rotate-[2.5deg] rounded-[2rem] border border-[#dadad3] bg-[#fbfbf8] p-4 shadow-[0_28px_80px_rgba(35,35,30,0.12)] transition-transform duration-500 hover:rotate-0 sm:p-6">
-            <div className="flex items-center justify-between border-b border-[#e3e3dd] pb-4 text-[10px] uppercase tracking-[0.18em] text-[#a0a09a]"><span>pexiloq.vercel.app / {template.profile.username}</span><button onClick={copyProfile} className="flex items-center gap-1.5 hover:text-[#171717]" aria-label="Copy profile link">{copied ? <Check className="size-3" /> : <Copy className="size-3" />} {copied ? t('copied') : t('shareButton')}</button></div>
+            <div className="flex items-center justify-between border-b border-[#e3e3dd] pb-4 text-[10px] uppercase tracking-[0.18em] text-[#a0a09a]"><span>{siteHost} / {template.profile.username}</span><button onClick={copyProfile} className="flex items-center gap-1.5 hover:text-[#171717]" aria-label="Copy profile link">{copied ? <Check className="size-3" /> : <Copy className="size-3" />} {copied ? t('copied') : t('shareButton')}</button></div>
             <div className="px-4 pb-6 pt-9 text-center sm:px-10"><div className="mx-auto grid size-20 place-items-center rounded-full bg-[#d8d2c5] text-2xl font-medium text-[#5a554c]">{template.profile.displayName.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}</div><h2 className="mt-5 text-2xl font-medium tracking-[-0.05em]">{template.profile.displayName}</h2><p className="mt-1 text-sm text-[#8a8a84]">{template.profile.headline}</p><p className="mx-auto mt-5 max-w-[310px] text-sm leading-6 text-[#686864]">{template.profile.bio}</p>
               <div className="mt-7 flex justify-center gap-4 text-xs font-medium text-[#8a8a84]" aria-label="Social profiles"><X className="size-4" /><span aria-hidden="true">ig</span><span aria-hidden="true">gh</span><span aria-hidden="true">in</span></div>
               <div className="mt-8 space-y-3">{template.links.map((link, i) => <a key={link.id} href="#" className="group flex items-center justify-between rounded-xl border border-[#e3e3dd] bg-white px-4 py-4 text-left transition-all hover:-translate-y-0.5 hover:border-[#b8b8b0] hover:shadow-sm"><span className="flex items-center gap-3"><span className="grid size-7 place-items-center rounded-lg bg-[#f0f0eb] text-xs text-[#74746d]">{linkIcons[i]}</span><span><span className="block text-sm font-medium">{link.title}</span><span className="mt-1 block text-[11px] text-[#a0a09a]">{link.url.replace(/^https?:\/\//, '').replace(/^www\./, '')} / pexiloq</span></span></span><ExternalLink className="size-4 text-[#b0b0a9] transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" /></a>)}</div>
