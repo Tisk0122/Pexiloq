@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
+import sharp from 'sharp'
 import { loadPublicProfileMeta } from '@/lib/firebase-server'
 
 export const runtime = 'nodejs'
@@ -40,6 +41,24 @@ function initialsOf(name: string) {
 // producing the missing/blank preview images. Fetching and validating the
 // bytes ourselves means a broken image degrades to "no image" (falls back to
 // the initials/gradient avatar, and no cover) instead of crashing the route.
+//
+// satori/resvg (the renderer behind ImageResponse) can only decode PNG,
+// JPEG, GIF, and SVG. Anything else it's handed — WebP is the common
+// real-world case, since browsers/CDNs and our own upload pipeline commonly
+// convert images to WebP by default — throws deep inside its Rust image
+// decoder *while the response body is being streamed*, not while
+// ImageResponse is constructed. That means the route's own try/catch around
+// `new ImageResponse(...)` never sees it: Next.js reports it as an opaque
+// "failed to pipe response" / "is not iterable" error with no usable stack
+// trace, and the request 500s.
+//
+// Trusting the upstream Content-Type header to decide what's "safe" isn't
+// reliable either — hosts mislabel images constantly. Instead, decode the
+// actual bytes with sharp (already bundled as part of Next's own image
+// pipeline) and re-encode as PNG unconditionally: this both guarantees
+// satori only ever sees a format it can render, and means WebP/AVIF/TIFF/
+// BMP avatars actually display instead of silently falling back to the
+// initials placeholder.
 async function safeImageDataUri(url: string | undefined | null): Promise<string | null> {
   if (!url) return null
   try {
@@ -48,22 +67,13 @@ async function safeImageDataUri(url: string | undefined | null): Promise<string 
     const res = await fetch(url, { signal: controller.signal })
     clearTimeout(timeout)
     if (!res.ok) return null
-    const contentType = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase()
-    // satori/resvg (the renderer behind ImageResponse) can only decode PNG,
-    // JPEG, GIF, and SVG. Anything else it's handed — WebP and BMP are the
-    // common real-world cases, since browsers/CDNs auto-convert uploads to
-    // WebP by default — throws deep inside its Rust image decoder *while
-    // the response body is being streamed*, not while ImageResponse is
-    // constructed. That means the route's own try/catch around
-    // `new ImageResponse(...)` never sees it: Next.js reports it as an
-    // opaque "failed to pipe response" / "is not iterable" error with no
-    // usable stack trace, and the request 500s. Filtering to formats we
-    // know satori can actually decode keeps an unsupported avatar/cover
-    // format a harmless "no image" fallback instead of a crash.
-    if (!['image/png', 'image/jpeg', 'image/gif', 'image/svg+xml'].includes(contentType)) return null
     const buffer = await res.arrayBuffer()
     if (buffer.byteLength === 0) return null
-    return `data:${contentType};base64,${Buffer.from(buffer).toString('base64')}`
+    const png = await sharp(Buffer.from(buffer))
+      .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
+      .png()
+      .toBuffer()
+    return `data:image/png;base64,${png.toString('base64')}`
   } catch (err) {
     console.error('[og-image] safeImageDataUri failed:', url, err)
     return null
@@ -109,8 +119,14 @@ const SCRIPT_FONT_FAMILY: Record<string, string> = {
 
 function detectScripts(text: string): string[] {
   const scripts: string[] = []
-  // Hiragana, Katakana, Kanji (CJK Unified Ideographs) -> Japanese font
-  if (/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(text)) scripts.push('ja')
+  // Hiragana, Katakana, Kanji (CJK Unified Ideographs) -> Japanese font.
+  // Also catches CJK Symbols & Punctuation (｡｢｣、。々) and Halfwidth/
+  // Fullwidth Forms (｜！？－ etc.) — these show up constantly in JP-style
+  // headlines/bios (e.g. "名前｜職業") even when no actual kana/kanji is
+  // present, and none of them exist in the base Latin "Noto Sans" font, so
+  // without this they render as blank tofu boxes even though the profile
+  // has no "Japanese text" by the old, narrower definition.
+  if (/[\u3000-\u303f\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uff00-\uffef]/.test(text)) scripts.push('ja')
   if (/[\uac00-\ud7a3]/.test(text)) scripts.push('ko')
   if (/[\u4e00-\u9fff]/.test(text) && !scripts.includes('ja')) scripts.push('zh')
   if (/[\u0900-\u097f]/.test(text)) scripts.push('hi')
