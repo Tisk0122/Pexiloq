@@ -655,10 +655,10 @@ function LinksSection({ profile, links, skin, layout, onTrack }: { profile: Prof
           : { color: profile.accentColor, backgroundColor: 'transparent' },
   })
   const baseLinkClass = profile.buttonStyle === 'solid'
-    ? `flex items-center justify-between rounded-xl border border-transparent text-left text-sm font-medium transition hover:-translate-y-0.5 hover:shadow-md`
+    ? `flex min-h-12 items-center justify-between rounded-xl border border-transparent text-left text-sm font-medium transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:shadow-none`
     : profile.buttonStyle === 'outline'
-      ? `flex items-center justify-between rounded-xl border-2 text-left text-sm font-medium transition hover:-translate-y-0.5 hover:shadow-sm`
-      : `flex items-center justify-between rounded-xl border border-transparent text-left text-sm font-medium transition hover:-translate-y-0.5 ${ghostHover}`
+      ? `flex min-h-12 items-center justify-between rounded-xl border-2 text-left text-sm font-medium transition duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 active:shadow-none`
+      : `flex min-h-12 items-center justify-between rounded-xl border border-transparent text-left text-sm font-medium transition duration-200 hover:-translate-y-0.5 active:translate-y-0 ${ghostHover}`
   const icon = (item: LinkItem, sizeClass = 'size-4') => profile.showLinkIcons !== false && (item.icon ? <span className="shrink-0 text-base leading-none" style={item.iconColor ? { color: item.iconColor } : undefined}>{item.icon}</span> : <img src={faviconFor(item.url)} alt="" aria-hidden="true" className={`${sizeClass} shrink-0 rounded-sm opacity-90`} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />)
 
   // A link's own displayStyle (if set) overrides the layout template's default look for that one link.
@@ -685,24 +685,24 @@ function LinksSection({ profile, links, skin, layout, onTrack }: { profile: Prof
     }
     if (style === 'thumbnail') {
       return (
-        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} className={`flex items-center gap-4 rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${skin.bar}`} style={item.bgColor ? { backgroundColor: item.bgColor, color: contrastColor(item.bgColor) } : undefined}>
+        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} className={`flex items-center gap-4 rounded-2xl border p-3 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 ${skin.bar}`} style={item.bgColor ? { backgroundColor: item.bgColor, color: contrastColor(item.bgColor) } : undefined}>
           {item.imageURL
             ? <CardImg src={item.imageURL} alt={item.title} className="size-14 shrink-0 rounded-xl" />
             : <span className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-xl bg-secondary text-lg">{icon(item, 'size-6')}</span>}
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium">{item.title}</span>
-            <span className={`block truncate text-xs ${item.bgColor ? 'opacity-70' : skin.sub}`}>{item.url.replace(/^https?:\/\//, '')}</span>
+            <span className={`mt-0.5 block truncate text-xs ${item.bgColor ? 'opacity-70' : skin.sub}`}>{item.url.replace(/^https?:\/\//, '')}</span>
           </span>
-          <ExternalLink className="size-4 shrink-0 opacity-60" />
+          <ExternalLink className="size-4 shrink-0 opacity-50 transition group-hover:opacity-80" />
         </a>
       )
     }
     // No per-link override: fall back to the layout template's default look.
     if (fallback === 'grid') {
       return (
-        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} {...linkStyle(item, `${baseLinkClass} flex-col gap-2 px-3 py-4 text-center`)}>
+        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} {...linkStyle(item, `${baseLinkClass} min-h-20 flex-col justify-center gap-2 px-3 py-4 text-center`)}>
           <span className="text-xl leading-none">{item.icon || <img src={faviconFor(item.url)} alt="" aria-hidden="true" className="mx-auto size-5 rounded-sm opacity-90" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />}</span>
-          <span className="line-clamp-2 w-full truncate text-xs">{item.title}</span>
+          <span className="line-clamp-2 w-full truncate text-xs leading-snug">{item.title}</span>
         </a>
       )
     }
@@ -719,15 +719,15 @@ function LinksSection({ profile, links, skin, layout, onTrack }: { profile: Prof
     }
     if (fallback === 'magazine') {
       return (
-        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} className={`flex items-center gap-4 rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${skin.bar}`}>
+        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} className={`flex items-center gap-4 rounded-2xl border p-3 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 ${skin.bar}`}>
           {item.imageURL
             ? <CardImg src={item.imageURL} alt={item.title} className="size-14 shrink-0 rounded-xl" />
             : <span className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-xl bg-secondary text-lg">{item.icon || <img src={faviconFor(item.url)} alt="" aria-hidden="true" className="size-6 rounded-sm opacity-90" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />}</span>}
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium">{item.title}</span>
-            <span className={`block truncate text-xs ${skin.sub}`}>{item.url.replace(/^https?:\/\//, '')}</span>
+            <span className={`mt-0.5 block truncate text-xs ${skin.sub}`}>{item.url.replace(/^https?:\/\//, '')}</span>
           </span>
-          <ExternalLink className="size-4 shrink-0 opacity-60" />
+          <ExternalLink className="size-4 shrink-0 opacity-50" />
         </a>
       )
     }
@@ -737,13 +737,13 @@ function LinksSection({ profile, links, skin, layout, onTrack }: { profile: Prof
           {icon(item)}
           <span className="truncate">{item.title}</span>
         </span>
-        <ExternalLink className="size-4 shrink-0 opacity-70" />
+        <ExternalLink className="size-4 shrink-0 opacity-60" />
       </a>
     )
   }
 
   if (layout === 'grid') {
-    return <div className={`${spacing.sectionGap} grid grid-cols-2 gap-3 sm:grid-cols-3`}>{visibleLinks.map((item) => renderLink(item, 'grid'))}</div>
+    return <div className={`${spacing.sectionGap} grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3`}>{visibleLinks.map((item) => renderLink(item, 'grid'))}</div>
   }
   if (layout === 'card') {
     return <div className={`${spacing.sectionGap} ${spacing.linkGap}`}>{visibleLinks.map((item) => renderLink(item, 'card'))}</div>
@@ -762,12 +762,12 @@ function ProjectsSection({ profile, projects, skin, layout, onTrack, t }: { prof
     return (
       <div className={`${spacing.sectionGap} space-y-4`}>
         {visibleProjects.map((item, index) => (
-          <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('projects', item.id)} className={`block overflow-hidden rounded-2xl text-left transition hover:-translate-y-0.5 ${index === 0 ? '' : `border ${skin.bar}`}`} style={index === 0 ? { backgroundColor: profile.accentColor, color: '#ffffff' } : undefined}>
-            {item.imageURL && <CardImg src={item.imageURL} alt={item.title} className="h-40 w-full" />}
+          <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('projects', item.id)} className={`block overflow-hidden rounded-2xl text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 ${index === 0 ? '' : `border ${skin.bar}`}`} style={index === 0 ? { backgroundColor: profile.accentColor, color: '#ffffff' } : undefined}>
+            {item.imageURL && <CardImg src={item.imageURL} alt={item.title} className="aspect-[16/9] w-full" />}
             <div className="p-4">
-              <span className={`text-[10px] uppercase tracking-widest ${index === 0 ? 'text-white/70' : skin.sub}`}>{t('selectedWork')}</span>
-              <p className="mt-2 text-base font-medium">{item.title}</p>
-              <p className={`mt-1 text-xs ${index === 0 ? 'text-white/70' : skin.sub}`}>{item.description}</p>
+              <span className={`text-[10px] font-medium uppercase tracking-widest ${index === 0 ? 'text-white/75' : skin.sub}`}>{t('selectedWork')}</span>
+              <p className="mt-2 text-base font-medium leading-snug">{item.title}</p>
+              {item.description && <p className={`mt-1.5 line-clamp-2 text-xs leading-relaxed ${index === 0 ? 'text-white/75' : skin.sub}`}>{item.description}</p>}
             </div>
           </a>
         ))}
@@ -778,11 +778,11 @@ function ProjectsSection({ profile, projects, skin, layout, onTrack, t }: { prof
   return (
     <div className={`${spacing.sectionGap} grid gap-3 ${cols}`}>
       {visibleProjects.map((item, index) => (
-        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('projects', item.id)} className={`min-h-32 rounded-xl p-4 text-left transition hover:-translate-y-0.5 ${index === 0 ? '' : skin.strip}`} style={index === 0 ? { backgroundColor: profile.accentColor, color: '#ffffff' } : undefined}>
-          {item.imageURL && <div className="mb-3"><CardImg src={item.imageURL} alt={item.title} className="h-20 w-full rounded-lg" /></div>}
-          <span className={`text-[10px] uppercase tracking-widest ${index === 0 ? 'text-white/70' : ''}`}>{t('selectedWork')}</span>
-          <p className={`${item.imageURL ? 'mt-3' : 'mt-8'} text-sm font-medium`}>{item.title}</p>
-          <p className={`mt-1 text-xs ${index === 0 ? 'text-white/70' : ''}`}>{item.description}</p>
+        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('projects', item.id)} className={`flex min-h-32 flex-col rounded-xl p-4 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 ${index === 0 ? '' : skin.strip}`} style={index === 0 ? { backgroundColor: profile.accentColor, color: '#ffffff' } : undefined}>
+          {item.imageURL && <div className="mb-3"><CardImg src={item.imageURL} alt={item.title} className="aspect-[16/10] w-full rounded-lg" /></div>}
+          <span className={`text-[10px] font-medium uppercase tracking-widest ${index === 0 ? 'text-white/75' : skin.sub}`}>{t('selectedWork')}</span>
+          <p className={`${item.imageURL ? 'mt-3' : 'mt-8'} text-sm font-medium leading-snug`}>{item.title}</p>
+          {item.description && <p className={`mt-1.5 line-clamp-2 text-xs leading-relaxed ${index === 0 ? 'text-white/75' : skin.sub}`}>{item.description}</p>}
         </a>
       ))}
     </div>
@@ -804,7 +804,7 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
   }
-  const cardShadow = profile.cardShadow === false ? '' : 'shadow-[0_24px_70px_rgba(35,35,30,0.1)]'
+  const cardShadow = profile.cardShadow === false ? '' : 'shadow-[0_20px_60px_rgba(35,35,30,0.08)]'
   const socialFilled = profile.socialStyle === 'filled'
   const layout: LayoutTemplate = layoutTemplates.includes(profile.layoutTemplate) ? profile.layoutTemplate : 'classic'
   const sectionOrder: SectionKind[] = profile.sectionOrder?.length ? profile.sectionOrder : defaultSectionOrder
@@ -828,24 +828,35 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
         </div>
       )}
       <div className="p-5">
-      <div className={`flex flex-wrap items-center justify-between gap-x-2 gap-y-2 border-b pb-3 text-[10px] uppercase tracking-[0.18em] ${skin.bar} ${skin.sub}`}>
-        <span className="min-w-0 truncate py-1">{siteHost} / {profile.username}</span>
-        <span className="flex shrink-0 items-center gap-1">
-          <button onClick={() => setShowQr((v) => !v)} aria-label={t('showQr')} aria-pressed={showQr} className={`-my-1 rounded-full px-2.5 py-2 transition ${showQr ? (dark ? 'bg-white/15' : 'bg-secondary/80') : dark ? 'hover:bg-white/10' : 'hover:bg-secondary/50'}`}>{t('qr')}</button>
-          <button onClick={share} aria-label={t('shareButton')} className={`-my-1 flex items-center gap-1 rounded-full px-2.5 py-2 transition ${dark ? 'hover:bg-white/10' : 'hover:bg-secondary/50'}`}>{copied ? <Check className="inline size-3" /> : <Copy className="inline size-3" />} {copied ? t('copied') : t('shareButton')}</button>
+      <div className={`flex items-center justify-between gap-2 text-[11px] ${skin.sub}`}>
+        <span className="min-w-0 truncate font-medium tracking-tight opacity-80">{siteHost}/{profile.username}</span>
+        <span className="flex shrink-0 items-center gap-0.5">
+          <button onClick={() => setShowQr((v) => !v)} aria-label={t('showQr')} aria-pressed={showQr} className={`-m-1.5 rounded-full p-2 transition ${showQr ? (dark ? 'bg-white/15' : 'bg-secondary/80') : dark ? 'hover:bg-white/10' : 'hover:bg-secondary/60'}`}>
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="size-3.5"><rect x="3" y="3" width="7" height="7" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" /><rect x="14" y="3" width="7" height="7" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" /><rect x="3" y="14" width="7" height="7" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" /><rect x="14.5" y="14.5" width="2.5" height="2.5" fill="currentColor" /><rect x="18.5" y="14.5" width="2.5" height="2.5" fill="currentColor" /><rect x="14.5" y="18.5" width="2.5" height="2.5" fill="currentColor" /><rect x="18.5" y="18.5" width="2.5" height="2.5" fill="currentColor" /></svg>
+          </button>
+          <span className="relative">
+            <button onClick={share} aria-label={t('shareButton')} className={`-m-1.5 rounded-full p-2 transition ${dark ? 'hover:bg-white/10' : 'hover:bg-secondary/60'}`}>
+              {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+            </button>
+            {copied && (
+              <span role="status" aria-live="polite" className={`pexiloq-fade-in pointer-events-none absolute right-0 top-full mt-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-medium shadow-sm ${dark ? 'bg-white text-[#151515]' : 'bg-[#151515] text-white'}`}>
+                {t('copied')}
+              </span>
+            )}
+          </span>
         </span>
       </div>
       {showQr && !preview && (
-        <div className="flex flex-col items-center gap-3 border-b pb-6 pt-6 text-center">
-          <img src={qrCodeFor(`https://${typeof window !== 'undefined' ? window.location.host : siteHost}/${profile.username}`)} alt={t('qr')} width={160} height={160} className="rounded-xl border" />
+        <div className={`mt-4 flex flex-col items-center gap-3 border-t pt-5 text-center ${skin.bar}`}>
+          <img src={qrCodeFor(`https://${typeof window !== 'undefined' ? window.location.host : siteHost}/${profile.username}`)} alt={t('qr')} width={148} height={148} className="rounded-xl border" />
           <a href={qrCodeFor(`https://${typeof window !== 'undefined' ? window.location.host : siteHost}/${profile.username}`, 512)} download={`${profile.username}-pexiloq-qr.png`} target="_blank" rel="noreferrer" className="text-xs underline underline-offset-4" style={{ color: profile.accentColor }}>{t('downloadQr')}</a>
         </div>
       )}
-      <div className={`px-2 py-8 sm:px-8 ${isNameCard ? 'text-left sm:flex sm:items-start sm:gap-8' : 'text-center'} ${profile.coverImageURL ? '-mt-8' : ''}`}>
+      <div className={`px-2 pb-6 pt-7 sm:px-6 ${isNameCard ? 'text-left sm:flex sm:items-start sm:gap-8' : 'text-center'} ${profile.coverImageURL ? '-mt-7' : ''}`}>
         <div className={isNameCard ? 'sm:w-64 sm:shrink-0 sm:text-left text-center' : ''}>
           {profile.showAvatar && (
             <div
-              className={`${isNameCard ? 'mx-auto sm:mx-0' : 'mx-auto'} ${profile.coverImageURL ? '-mt-2' : ''} relative grid size-20 place-items-center overflow-hidden text-xl font-medium ${dark ? 'bg-white/10 text-[#f5f5f2]' : 'bg-secondary text-[#151515]'} ${avatarShapeClass[profile.avatarShape]} ${profile.avatarAnimation === 'pulse' ? 'pexiloq-avatar-pulse' : ''} ${profile.avatarAnimation === 'spin' ? 'pexiloq-avatar-spin' : ''} ${profile.avatarAnimation === 'glow' ? 'pexiloq-avatar-glow' : ''}`}
+              className={`${isNameCard ? 'mx-auto sm:mx-0' : 'mx-auto'} ${profile.coverImageURL ? '-mt-3' : ''} relative grid size-22 place-items-center overflow-hidden text-xl font-medium ${dark ? 'bg-white/10 text-[#f5f5f2]' : 'bg-secondary text-[#151515]'} ${avatarShapeClass[profile.avatarShape]} ${profile.avatarAnimation === 'pulse' ? 'pexiloq-avatar-pulse' : ''} ${profile.avatarAnimation === 'spin' ? 'pexiloq-avatar-spin' : ''} ${profile.avatarAnimation === 'glow' ? 'pexiloq-avatar-glow' : ''}`}
               style={{
                 // The ring always derives from the profile's own accent color, never a fixed
                 // hue, so it can't clash with a brand-colored avatar. A themed background
@@ -858,23 +869,27 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
               {profile.photoURL ? <CardImg src={profile.photoURL} alt={profile.displayName} className={`size-full ${avatarShapeClass[profile.avatarShape]}`} /> : profile.displayName.slice(0, 2).toUpperCase()}
             </div>
           )}
-          <h1 className={`mt-5 flex items-center gap-1.5 text-3xl font-medium tracking-[-0.05em] ${font} ${isNameCard ? '' : 'justify-center'}`}>
-            {profile.displayName}
+          <h1 className={`${profile.showAvatar ? 'mt-5' : ''} flex items-center gap-1.5 text-[1.85rem] font-medium leading-[1.15] tracking-[-0.04em] ${font} ${isNameCard ? '' : 'justify-center'}`}>
+            <span className="min-w-0 truncate">{profile.displayName}</span>
             {profile.showVerifiedBadge && (
               <span aria-label={t('verifiedBadge')} title={t('verifiedBadge')} className="inline-grid size-5 shrink-0 place-items-center rounded-full text-white" style={{ backgroundColor: profile.accentColor }}>
                 <Check className="size-3" strokeWidth={3} />
               </span>
             )}
           </h1>
-          {profile.headline && <p className={`mt-2 text-sm ${skin.sub}`}>{profile.headline}</p>}
-          {profile.bio && <p className={`mt-5 text-sm leading-6 ${skin.sub} ${isNameCard ? 'sm:max-w-none' : 'mx-auto max-w-sm'}`}>{profile.bio}</p>}
-          {profile.website && <a href={profile.website} target="_blank" className="mt-4 inline-block text-xs underline underline-offset-4" style={{ color: profile.accentColor }}>{profile.website.replace(/^https?:\/\//, '')}</a>}
+          {profile.headline && <p className={`mt-1.5 text-sm font-medium ${skin.sub}`}>{profile.headline}</p>}
+          {profile.bio && <p className={`mt-4 text-sm leading-6 ${skin.sub} ${isNameCard ? 'sm:max-w-none' : 'mx-auto max-w-sm'}`}>{profile.bio}</p>}
+          {profile.website && (
+            <a href={profile.website} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-medium underline decoration-current/30 underline-offset-4 transition hover:decoration-current/70" style={{ color: profile.accentColor }}>
+              {profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+            </a>
+          )}
           {Object.entries(profile.socials || {}).filter(([, v]) => v).length > 0 && (
             <div className={`mt-5 flex flex-wrap items-center gap-2 ${isNameCard ? 'justify-center sm:justify-start' : 'justify-center'}`}>
               {socialPlatforms.filter((p) => profile.socials?.[p]).map((p) => {
                 const value = profile.socials![p]!
                 const href = socialHref(p, value, profile.twitterIcon)
-                return <a key={p} href={href} target="_blank" rel="noreferrer" aria-label={socialMeta[p].label} onClick={() => onTrack?.('socials', p)} className={`grid size-9 place-items-center rounded-full transition hover:-translate-y-0.5 ${socialFilled ? '' : `border ${skin.bar}`}`} style={socialFilled ? { backgroundColor: profile.accentColor, color: '#ffffff' } : undefined}><SocialGlyph platform={p} twitterIcon={profile.twitterIcon} className="size-4" /></a>
+                return <a key={p} href={href} target="_blank" rel="noreferrer" aria-label={socialMeta[p].label} onClick={() => onTrack?.('socials', p)} className={`grid size-9 place-items-center rounded-full transition duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 ${socialFilled ? '' : `border ${skin.bar}`}`} style={socialFilled ? { backgroundColor: profile.accentColor, color: '#ffffff' } : undefined}><SocialGlyph platform={p} twitterIcon={profile.twitterIcon} className="size-4" /></a>
               })}
             </div>
           )}
@@ -883,7 +898,7 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
           {sectionOrder.map((key) => <div key={key}>{sections[key]}</div>)}
         </div>
       </div>
-      {profile.showBadge && <div className={`border-t pt-4 text-center text-[10px] ${skin.bar} ${skin.sub}`}>{t('made')} <span className={`font-semibold ${dark ? 'text-[#f5f5f2]' : 'text-[#151515]'}`}>pexiloq</span></div>}
+      {profile.showBadge && <div className={`mt-2 border-t pt-4 text-center text-[10px] opacity-70 ${skin.bar} ${skin.sub}`}>{t('made')} <span className={`font-semibold ${dark ? 'text-[#f5f5f2]' : 'text-[#151515]'}`}>pexiloq</span></div>}
       </div>
     </div>
   )
@@ -2420,21 +2435,36 @@ export function PublicProfile({ username }: { username?: string }) {
     void recordAnalytics(pageUid, type, key)
   }
   const loaded = data !== 'missing' ? data : null
+  const pageDark = loaded ? loaded.profile.theme === 'dark' : false
+  const chromePill = pageDark
+    ? 'border-white/15 bg-white/5 text-[#f5f5f2] hover:bg-white/10'
+    : 'border-border bg-card/80 backdrop-blur-sm hover:bg-card'
+  const noticeCard = pageDark ? 'border-white/10 bg-white/5' : 'border-border bg-card'
+  const noticeSub = pageDark ? 'text-[#adb1a9]' : 'text-muted-foreground'
   return (
-    <main className={`relative min-h-screen px-5 py-8 ${skin} ${animated ? 'pexiloq-animated-gradient' : ''}`} style={pageStyle}>
+    <main className={`relative min-h-screen px-5 py-8 sm:py-10 ${skin} ${animated ? 'pexiloq-animated-gradient' : ''}`} style={pageStyle}>
       {overlay && loaded && <div className="pointer-events-none absolute inset-0" style={{ backgroundColor: loaded.profile.theme === 'dark' ? '#000000' : '#ffffff', opacity: Math.min(Math.max(loaded.profile.backgroundOverlay, 0), 1) }} />}
       <div className="relative mx-auto max-w-2xl">
-        <div className="flex flex-wrap items-center justify-between gap-3"><Logo /><Link href={user ? '/dashboard' : '/signup'} className="whitespace-nowrap rounded-full border px-4 py-2 text-xs">{t('createYours')} <ArrowUpRight className="ml-1 inline size-3" /></Link></div>
-        {data === 'missing' && <div className="mt-16 rounded-2xl border bg-card p-10 text-center"><p className="text-lg font-medium">{t('notFound')}</p></div>}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Logo />
+          <Link href={user ? '/dashboard' : '/signup'} className={`inline-flex items-center whitespace-nowrap rounded-full border px-4 py-2 text-xs font-medium transition ${chromePill}`}>
+            {t('createYours')} <ArrowUpRight className="ml-1 inline size-3" />
+          </Link>
+        </div>
+        {data === 'missing' && (
+          <div className={`mt-16 rounded-2xl border p-10 text-center ${noticeCard}`}>
+            <p className="text-lg font-medium">{t('notFound')}</p>
+          </div>
+        )}
         {loaded && !loaded.profile.isPublic && (
-          <div className="mt-16 rounded-2xl border bg-card p-10 text-center">
+          <div className={`mt-16 rounded-2xl border p-10 text-center ${noticeCard}`}>
             <p className="text-lg font-medium">{t('privateNotice')}</p>
-            <p className="mt-2 text-sm text-muted-foreground">{t('privateProfileText')}</p>
-            <Link href={user ? '/dashboard' : '/signup'} className="mt-6 inline-flex items-center gap-1 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground">{t('publishNow')} <ArrowUpRight className="size-4" /></Link>
+            <p className={`mt-2 text-sm ${noticeSub}`}>{t('privateProfileText')}</p>
+            <Link href={user ? '/dashboard' : '/signup'} className="mt-6 inline-flex items-center gap-1 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition hover:opacity-90">{t('publishNow')} <ArrowUpRight className="size-4" /></Link>
           </div>
         )}
         {loaded && loaded.profile.isPublic && (
-          <div className="mt-10"><ProfileCard profile={loaded.profile} links={loaded.links} projects={loaded.projects} onTrack={track} /></div>
+          <div className="mt-8 sm:mt-10"><ProfileCard profile={loaded.profile} links={loaded.links} projects={loaded.projects} onTrack={track} /></div>
         )}
       </div>
     </main>
