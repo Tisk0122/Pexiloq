@@ -26,6 +26,35 @@ function GoogleIcon() { return <svg aria-hidden="true" viewBox="0 0 24 24" class
 
 function providerFor() { return new GoogleAuthProvider() }
 
+// Firebase Auth errors arrive as technical codes like "auth/invalid-credential" or raw
+// English messages ("Firebase: Error (auth/too-many-requests)."). Showing that directly
+// breaks two rules at once: it's unreadable for non-technical or non-English-speaking
+// users, and it doesn't tell them what to actually do next. This maps the handful of
+// codes people realistically hit to a short, localized, actionable message, and falls
+// back to a generic "something went wrong" for anything unexpected rather than ever
+// surfacing Firebase's own wording.
+function friendlyAuthError(err: any, t: (key: string) => string): string {
+  const code: string = err?.code || ''
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+      return t('authErrorInvalidCredential')
+    case 'auth/email-already-in-use':
+      return t('authErrorEmailInUse')
+    case 'auth/weak-password':
+      return t('authErrorWeakPassword')
+    case 'auth/invalid-email':
+      return t('authErrorInvalidEmail')
+    case 'auth/too-many-requests':
+      return t('authErrorTooManyRequests')
+    case 'auth/network-request-failed':
+      return t('authErrorNetwork')
+    default:
+      return t('somethingWrong')
+  }
+}
+
 async function ensureUniqueUsername(base: string): Promise<string> {
   if (!firebaseEnabled) return base
   let candidate = base
@@ -51,8 +80,8 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
     }
     router.push('/dashboard')
   }
-  async function submit(e: React.FormEvent) { e.preventDefault(); if (mode === 'signup' && !accepted) { setError(c.required); return } setBusy(true); setError(''); try { if (!firebaseEnabled || !auth) { router.push('/dashboard'); return }; const result = mode === 'login' ? await signInWithEmailAndPassword(auth, email, password) : await createUserWithEmailAndPassword(auth, email, password); await finish(result) } catch (err: any) { setError(err.code === 'auth/popup-closed-by-user' ? '' : err.message?.replace('Firebase: ', '') || t('somethingWrong')) } finally { setBusy(false) } }
-  async function oauth() { if (mode === 'signup' && !accepted) { setError(c.required); return }; setBusy(true); setError(''); try { if (!firebaseEnabled || !auth) { router.push('/dashboard'); return }; await finish(await signInWithPopup(auth, providerFor())) } catch (err: any) { setError(err.code === 'auth/popup-closed-by-user' ? '' : err.message?.replace('Firebase: ', '') || t('somethingWrong')) } finally { setBusy(false) } }
+  async function submit(e: React.FormEvent) { e.preventDefault(); if (mode === 'signup' && !accepted) { setError(c.required); return } setBusy(true); setError(''); try { if (!firebaseEnabled || !auth) { router.push('/dashboard'); return }; const result = mode === 'login' ? await signInWithEmailAndPassword(auth, email, password) : await createUserWithEmailAndPassword(auth, email, password); await finish(result) } catch (err: any) { setError(err.code === 'auth/popup-closed-by-user' ? '' : friendlyAuthError(err, t)) } finally { setBusy(false) } }
+  async function oauth() { if (mode === 'signup' && !accepted) { setError(c.required); return }; setBusy(true); setError(''); try { if (!firebaseEnabled || !auth) { router.push('/dashboard'); return }; await finish(await signInWithPopup(auth, providerFor())) } catch (err: any) { setError(err.code === 'auth/popup-closed-by-user' ? '' : friendlyAuthError(err, t)) } finally { setBusy(false) } }
   return (
     <main className="min-h-screen bg-background px-5 py-6 sm:px-8 sm:py-10 text-foreground">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between">

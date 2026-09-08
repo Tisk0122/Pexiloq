@@ -9,7 +9,11 @@ export const runtime = 'nodejs'
 
 export const maxBytes = 10 * 1024 * 1024
 
-const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'svg', 'heic']
+// SVG is intentionally excluded: it's an XML/script-capable format, so accepting it here would
+// let a user upload a file containing <script>/event-handler payloads that could execute if the
+// image is ever opened directly from its R2 URL (a classic stored-XSS vector for avatar/cover
+// upload endpoints). Raster-only keeps every accepted file safe to render as a plain image.
+const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'heic']
 
 // Confirms the request's idToken really belongs to the userId it claims to act
 // as, so one signed-in user can't upload/delete files under another user's
