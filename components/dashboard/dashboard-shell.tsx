@@ -12,6 +12,7 @@ import { Logo } from '../logo'
 import { CardImg } from '../preview/profile-card'
 import { LoadingScreen } from '../ui/loader'
 import { useWorkspace } from '../workspace-provider'
+import { VerifyEmailScreen } from './verify-email-screen'
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -19,7 +20,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [mobile, setMobile] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const { t } = useI18n()
-  const { profile, loading, uid } = useWorkspace()
+  const { profile, loading, uid, emailVerified } = useWorkspace()
 
   const nav = [
     { href: '/dashboard', label: t('overview'), icon: Eye },
@@ -43,6 +44,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [signedOut, router])
 
   if (loading || signedOut) return <LoadingScreen />
+
+  if (firebaseEnabled && !emailVerified) {
+    return <VerifyEmailScreen />
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">

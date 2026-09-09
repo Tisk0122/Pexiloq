@@ -14,6 +14,9 @@ type Workspace = {
   persistLinks: (next: LinkItem[]) => Promise<void>
   persistProjects: (next: Project[]) => Promise<void>
   uid: string | null
+  emailVerified: boolean
+  email: string | null
+  reloadUser: () => Promise<boolean>
 }
 
 const WorkspaceContext = createContext<Workspace | null>(null)
@@ -23,6 +26,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [links, setLinks] = useState<LinkItem[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [uid, setUid] = useState<string | null>(null)
+  const [emailVerified, setEmailVerified] = useState<boolean>(true)
+  const [email, setEmail] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -32,6 +37,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
     return onAuthStateChanged(auth, async (user) => {
       setUid(user?.uid || null)
+      setEmailVerified(user ? user.emailVerified : true)
+      setEmail(user?.email || null)
       try {
         if (user) {
           const bundle = await loadUserBundle(user.uid)
@@ -70,8 +77,21 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (uid) await saveItems(uid, 'projects', next)
   }
 
+  const reloadUser = async (): Promise<boolean> => {
+    if (!auth?.currentUser) return false
+    try {
+      await auth.currentUser.reload()
+      const isVerified = auth.currentUser.emailVerified
+      setEmailVerified(isVerified)
+      setEmail(auth.currentUser.email)
+      return isVerified
+    } catch {
+      return false
+    }
+  }
+
   return (
-    <WorkspaceContext.Provider value={{ profile, links, projects, loading, persistProfile, persistLinks, persistProjects, uid }}>
+    <WorkspaceContext.Provider value={{ profile, links, projects, loading, persistProfile, persistLinks, persistProjects, uid, emailVerified, email, reloadUser }}>
       {children}
     </WorkspaceContext.Provider>
   )

@@ -8,7 +8,7 @@ import { auth, firebaseEnabled, loadProfileByUsername, saveProfile } from '@/lib
 import { LanguageSwitcher, useI18n, type Language } from '@/components/i18n-provider'
 import { LegalDialog } from '@/components/legal-content'
 import { siteHost } from '@/lib/site'
-import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth'
+import { createUserWithEmailAndPassword, GoogleAuthProvider, sendEmailVerification, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth'
 
 const copy: Record<Language, Record<string, string>> = {
   en: { login: 'Log in to Pexiloq', signup: 'Create your Pexiloq', loginKicker: 'Welcome back', signupKicker: 'Make your place', loginBody: 'Pick up where you left off.', signupBody: 'A thoughtful home for everything you want to share.', name: 'Name', email: 'Email', password: 'Password', namePlaceholder: 'Your name', emailPlaceholder: 'you@example.com', passwordPlaceholder: 'At least 6 characters', submitLogin: 'Log in', submitSignup: 'Create account', or: 'or continue with', google: 'Google', agree: 'I agree to the', terms: 'Terms of Service', and: 'and', privacy: 'Privacy Policy', required: 'Please accept the terms and privacy policy to continue.', newHere: 'New here?', already: 'Already have an account?', signupLink: 'Sign up', loginLink: 'Log in', home: 'Back to home', wait: 'Please wait…' },
@@ -80,7 +80,33 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
     }
     router.push('/dashboard')
   }
-  async function submit(e: React.FormEvent) { e.preventDefault(); if (mode === 'signup' && !accepted) { setError(c.required); return } setBusy(true); setError(''); try { if (!firebaseEnabled || !auth) { router.push('/dashboard'); return }; const result = mode === 'login' ? await signInWithEmailAndPassword(auth, email, password) : await createUserWithEmailAndPassword(auth, email, password); await finish(result) } catch (err: any) { setError(err.code === 'auth/popup-closed-by-user' ? '' : friendlyAuthError(err, t)) } finally { setBusy(false) } }
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    if (mode === 'signup' && !accepted) { setError(c.required); return }
+    setBusy(true)
+    setError('')
+    try {
+      if (!firebaseEnabled || !auth) { router.push('/dashboard'); return }
+      if (mode === 'login') {
+        const result = await signInWithEmailAndPassword(auth, email, password)
+        await finish(result)
+      } else {
+        const result = await createUserWithEmailAndPassword(auth, email, password)
+        if (result.user && !result.user.emailVerified) {
+          try {
+            await sendEmailVerification(result.user)
+          } catch (verr) {
+            console.error('Failed to send verification email on signup:', verr)
+          }
+        }
+        await finish(result)
+      }
+    } catch (err: any) {
+      setError(err.code === 'auth/popup-closed-by-user' ? '' : friendlyAuthError(err, t))
+    } finally {
+      setBusy(false)
+    }
+  }
   async function oauth() { if (mode === 'signup' && !accepted) { setError(c.required); return }; setBusy(true); setError(''); try { if (!firebaseEnabled || !auth) { router.push('/dashboard'); return }; await finish(await signInWithPopup(auth, providerFor())) } catch (err: any) { setError(err.code === 'auth/popup-closed-by-user' ? '' : friendlyAuthError(err, t)) } finally { setBusy(false) } }
   return (
     <main className="min-h-screen bg-background px-5 py-6 sm:px-8 sm:py-10 text-foreground">
