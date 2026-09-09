@@ -91,6 +91,8 @@ export type Profile = {
   coverImagePositionY: number
   showVerifiedBadge: boolean
   avatarAnimation: AvatarAnimation
+  linkSectionTitle?: string
+  projectSectionTitle?: string
 }
 
 export const radiusClass: Record<CardRadius, string> = { lg: 'rounded-lg', xl: 'rounded-xl', '2xl': 'rounded-2xl', '3xl': 'rounded-3xl' }
@@ -156,6 +158,7 @@ export const emptyProfile: Profile = {
   layoutTemplate: 'classic', sectionOrder: [...defaultSectionOrder],
   colorThemePack: 'custom', backgroundAnimated: false, backgroundOverlay: 0, backgroundPatternDensity: 1, backgroundPatternColor: '',
   coverImageURL: '', coverImageHeight: 140, coverImageFit: 'cover', coverImagePositionX: 50, coverImagePositionY: 50, showVerifiedBadge: false, avatarAnimation: 'none',
+  linkSectionTitle: '', projectSectionTitle: '',
 }
 
 export function normalizeProfile(p: Partial<Profile>): Profile {

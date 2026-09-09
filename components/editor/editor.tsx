@@ -331,7 +331,7 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
 
           {kind === 'appearance' && (
             <div className="rounded-2xl border bg-card p-6 shadow-xs">
-              <AppearanceControls draft={draftProfile} onChange={setDraftProfile} uid={uid} />
+              <AppearanceControls draft={draftProfile} onChange={setDraftProfile} savedProfile={profile} uid={uid} />
             </div>
           )}
 
@@ -342,6 +342,14 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
                   <Link2 className="mx-auto size-6 text-muted-foreground" />
                   <p className="mt-3 text-sm font-medium">{t('noLinksYet')}</p>
                   <p className="mt-1 text-sm text-muted-foreground">{t('noLinksYetHint')}</p>
+                  <button
+                    type="button"
+                    onClick={addLink}
+                    className="mt-4 inline-flex min-h-[40px] items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition hover:opacity-90"
+                  >
+                    <Plus className="size-3.5" />
+                    {t('addLink')}
+                  </button>
                 </div>
               )}
               {draftLinks.map((item, index) => (
@@ -522,6 +530,14 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
                   <Layers className="mx-auto size-6 text-muted-foreground" />
                   <p className="mt-3 text-sm font-medium">{t('noProjectsYet')}</p>
                   <p className="mt-1 text-sm text-muted-foreground">{t('noProjectsYetHint')}</p>
+                  <button
+                    type="button"
+                    onClick={addProject}
+                    className="mt-4 inline-flex min-h-[40px] items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition hover:opacity-90"
+                  >
+                    <Plus className="size-3.5" />
+                    {t('addProject')}
+                  </button>
                 </div>
               )}
               {draftProjects.map((item, index) => (

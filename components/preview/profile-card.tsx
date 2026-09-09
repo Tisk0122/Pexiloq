@@ -277,22 +277,44 @@ export function LinksSection({ profile, links, skin, layout, onTrack }: { profil
   const avgTitleLen = visibleLinks.reduce((acc, x) => acc + (x.title?.length || 0), 0) / visibleLinks.length
   const autoUseMobileGrid = !hasThumbnails && !hasLarge && avgTitleLen <= 18 && visibleLinks.length >= 2
 
+  const sectionTitleHeader = profile.linkSectionTitle ? (
+    <div className="mb-2.5 text-left text-xs font-semibold uppercase tracking-wider opacity-75">{profile.linkSectionTitle}</div>
+  ) : null
+
   if (layout === 'grid' || autoUseMobileGrid) {
     const gridCols = layout === 'grid' ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-1'
     return (
-      <div className={`${spacing.sectionGap} grid ${gridCols} gap-2.5 sm:gap-3`}>
-        {visibleLinks.map((item) => renderLink(item, 'grid'))}
+      <div className={spacing.sectionGap}>
+        {sectionTitleHeader}
+        <div className={`grid ${gridCols} gap-2.5 sm:gap-3`}>
+          {visibleLinks.map((item) => renderLink(item, 'grid'))}
+        </div>
       </div>
     )
   }
 
   if (layout === 'card') {
-    return <div className={`${spacing.sectionGap} ${spacing.linkGap}`}>{visibleLinks.map((item) => renderLink(item, 'card'))}</div>
+    return (
+      <div className={spacing.sectionGap}>
+        {sectionTitleHeader}
+        <div className={spacing.linkGap}>{visibleLinks.map((item) => renderLink(item, 'card'))}</div>
+      </div>
+    )
   }
   if (layout === 'magazine') {
-    return <div className={`${spacing.sectionGap} space-y-3`}>{visibleLinks.map((item) => renderLink(item, 'magazine'))}</div>
+    return (
+      <div className={spacing.sectionGap}>
+        {sectionTitleHeader}
+        <div className="space-y-3">{visibleLinks.map((item) => renderLink(item, 'magazine'))}</div>
+      </div>
+    )
   }
-  return <div className={`${spacing.sectionGap} ${spacing.linkGap}`}>{visibleLinks.map((item) => renderLink(item, 'default'))}</div>
+  return (
+    <div className={spacing.sectionGap}>
+      {sectionTitleHeader}
+      <div className={spacing.linkGap}>{visibleLinks.map((item) => renderLink(item, 'default'))}</div>
+    </div>
+  )
 }
 
 export function ProjectsSection({ profile, projects, skin, layout, onTrack, t }: { profile: Profile; projects: Project[]; skin: Skin; layout: LayoutTemplate; onTrack?: CardTrack; t: (key: string) => string }) {
@@ -300,27 +322,34 @@ export function ProjectsSection({ profile, projects, skin, layout, onTrack, t }:
   if (!visibleProjects.length) return null
   const spacing = spacingConfig[profile.spacing || 'cozy']
 
+  const projectTitleHeader = profile.projectSectionTitle ? (
+    <div className="mb-2.5 text-left text-xs font-semibold uppercase tracking-wider opacity-75">{profile.projectSectionTitle}</div>
+  ) : null
+
   if (layout === 'magazine') {
     return (
-      <div className={`${spacing.sectionGap} space-y-4`}>
-        {visibleProjects.map((item, index) => (
-          <a
-            key={item.id}
-            href={item.url}
-            target="_blank"
-            rel="noreferrer"
-            onClick={() => onTrack?.('projects', item.id)}
-            className={`block overflow-hidden rounded-2xl text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 ${index === 0 ? '' : `border ${skin.bar}`}`}
-            style={index === 0 ? { backgroundColor: profile.accentColor, color: '#ffffff' } : undefined}
-          >
-            {item.imageURL && <CardImg src={item.imageURL} alt={item.title} className="aspect-[16/9] w-full" />}
-            <div className="p-4">
-              <span className={`text-[10px] font-medium uppercase tracking-widest ${index === 0 ? 'text-white/75' : skin.sub}`}>{t('selectedWork')}</span>
-              <p className="mt-1.5 text-base font-medium leading-snug">{item.title}</p>
-              {item.description && <p className={`mt-1 line-clamp-3 text-xs leading-relaxed ${index === 0 ? 'text-white/75' : skin.sub}`}>{item.description}</p>}
-            </div>
-          </a>
-        ))}
+      <div className={spacing.sectionGap}>
+        {projectTitleHeader}
+        <div className="space-y-4">
+          {visibleProjects.map((item, index) => (
+            <a
+              key={item.id}
+              href={item.url}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => onTrack?.('projects', item.id)}
+              className={`block overflow-hidden rounded-2xl text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 ${index === 0 ? '' : `border ${skin.bar}`}`}
+              style={index === 0 ? { backgroundColor: profile.accentColor, color: '#ffffff' } : undefined}
+            >
+              {item.imageURL && <CardImg src={item.imageURL} alt={item.title} className="aspect-[16/9] w-full" />}
+              <div className="p-4">
+                <span className={`text-[10px] font-medium uppercase tracking-widest ${index === 0 ? 'text-white/75' : skin.sub}`}>{t('selectedWork')}</span>
+                <p className="mt-1.5 text-base font-medium leading-snug">{item.title}</p>
+                {item.description && <p className={`mt-1 line-clamp-3 text-xs leading-relaxed ${index === 0 ? 'text-white/75' : skin.sub}`}>{item.description}</p>}
+              </div>
+            </a>
+          ))}
+        </div>
       </div>
     )
   }
@@ -340,8 +369,10 @@ export function ProjectsSection({ profile, projects, skin, layout, onTrack, t }:
     : (autoMobile2Col ? 'grid-cols-2 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2')
 
   return (
-    <div className={`${spacing.sectionGap} grid gap-3 ${cols}`}>
-      {visibleProjects.map((item, index) => (
+    <div className={spacing.sectionGap}>
+      {projectTitleHeader}
+      <div className={`grid gap-3 ${cols}`}>
+        {visibleProjects.map((item, index) => (
         <a
           key={item.id}
           href={item.url}
@@ -362,7 +393,8 @@ export function ProjectsSection({ profile, projects, skin, layout, onTrack, t }:
             {item.description && <p className={`mt-1 line-clamp-3 text-xs leading-relaxed ${index === 0 ? 'text-white/75' : skin.sub}`}>{item.description}</p>}
           </div>
         </a>
-      ))}
+        ))}
+      </div>
     </div>
   )
 }

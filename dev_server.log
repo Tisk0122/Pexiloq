@@ -14,3 +14,4 @@
  GET / 200 in 155ms (next.js: 18ms, application-code: 137ms)
  GET /dashboard/profile 200 in 1057ms (next.js: 904ms, application-code: 152ms)
  GET /login 200 in 633ms (next.js: 550ms, application-code: 84ms)
+ GET / 200 in 261ms (next.js: 25ms, application-code: 236ms)

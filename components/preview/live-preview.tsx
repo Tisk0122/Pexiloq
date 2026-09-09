@@ -136,7 +136,9 @@ export function DeviceToggle({ device, onChange }: { device: PreviewDevice; onCh
   )
 }
 
-export function LivePreview({ profile, links, projects, note = true }: { profile: Profile; links: LinkItem[]; projects: Project[]; note?: boolean }) {
+const MemoizedProfileCard = React.memo(ProfileCard)
+
+export const LivePreview = React.memo(function LivePreview({ profile, links, projects, note = true }: { profile: Profile; links: LinkItem[]; projects: Project[]; note?: boolean }) {
   const [device, setDevice] = useState<PreviewDevice>('phone')
   return (
     <div>
@@ -146,13 +148,13 @@ export function LivePreview({ profile, links, projects, note = true }: { profile
       </div>
       {device === 'phone' ? (
         <PhonePreviewFrame profile={profile}>
-          <ProfileCard profile={profile} links={links} projects={projects} preview />
+          <MemoizedProfileCard profile={profile} links={links} projects={projects} preview />
         </PhonePreviewFrame>
       ) : (
         <DesktopPreviewFrame profile={profile}>
-          <ProfileCard profile={profile} links={links} projects={projects} preview />
+          <MemoizedProfileCard profile={profile} links={links} projects={projects} preview />
         </DesktopPreviewFrame>
       )}
     </div>
   )
-}
+})
