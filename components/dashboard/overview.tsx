@@ -110,6 +110,14 @@ export function Overview() {
           <div className="mt-6 flex flex-col items-center justify-center rounded-xl bg-secondary/40 px-4 py-8 text-center">
             <Zap className="size-8 text-muted-foreground/60" />
             <p className="mt-2 text-sm font-medium">{t('noClicksYet')}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Share your public link to start tracking profile analytics.</p>
+            <Link
+              href="/dashboard/links"
+              className="mt-3.5 inline-flex min-h-[36px] items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground shadow-xs transition hover:opacity-90"
+            >
+              <Link2 className="size-3.5" />
+              {t('addFirstLink')}
+            </Link>
           </div>
         ) : (
           <div className="mt-6 space-y-3.5">

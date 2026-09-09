@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { ArrowDown, ArrowUp, Check, Eye, GripVertical, Layers, Link2, Loader2, Plus, Save, Trash2 } from 'lucide-react'
 import { useI18n } from '@/components/i18n-provider'
-import { saveItems, saveProfile } from '@/lib/firebase'
+import { checkUsernameAvailable, saveItems, saveProfile } from '@/lib/firebase'
 import { PageHeader } from '../dashboard/overview'
 import { LivePreview } from '../preview/live-preview'
 import { CardImg } from '../preview/profile-card'
@@ -30,6 +30,38 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
   const [draftProjects, setDraftProjects] = useState(projects)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor')
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle')
+
+  useEffect(() => {
+    if (kind !== 'profile') return
+    const candidate = draftProfile.username?.trim().toLowerCase()
+
+    if (!candidate || candidate.length < 2) {
+      setUsernameStatus('invalid')
+      return
+    }
+
+    if (candidate === profile.username) {
+      setUsernameStatus('idle')
+      return
+    }
+
+    setUsernameStatus('checking')
+    const checkTimer = window.setTimeout(async () => {
+      try {
+        const res = await checkUsernameAvailable(candidate, uid || undefined)
+        if (res.available) {
+          setUsernameStatus('available')
+        } else {
+          setUsernameStatus('taken')
+        }
+      } catch {
+        setUsernameStatus('available')
+      }
+    }, 500)
+
+    return () => window.clearTimeout(checkTimer)
+  }, [draftProfile.username, profile.username, uid, kind])
 
   function reorder<T>(list: T[], setList: (next: T[]) => void, targetIndex: number) {
     if (dragIndex === null || dragIndex === targetIndex) return
@@ -58,9 +90,29 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
   const persistNow = async () => {
     setSaving(true)
     try {
-      if (kind === 'profile' || kind === 'appearance') await persistProfile(draftProfile)
+      if (kind === 'profile' || kind === 'appearance') {
+        const candidate = draftProfile.username?.trim().toLowerCase()
+        if (candidate !== profile.username) {
+          if (usernameStatus === 'taken' || !candidate || candidate.length < 2) {
+            setDraftProfile((prev) => ({ ...prev, username: profile.username }))
+            setNotice(t('usernameTaken'))
+            window.setTimeout(() => setNotice(''), 3000)
+            await persistProfile({ ...draftProfile, username: profile.username })
+            return
+          }
+        }
+        await persistProfile(draftProfile)
+      }
       if (kind === 'links') await persistLinks(draftLinks)
       if (kind === 'projects') await persistProjects(draftProjects)
+    } catch (err: any) {
+      if (err?.message === 'USERNAME_TAKEN' || String(err).includes('USERNAME_TAKEN')) {
+        setDraftProfile((prev) => ({ ...prev, username: profile.username }))
+        setNotice(t('usernameTaken'))
+        window.setTimeout(() => setNotice(''), 3000)
+      } else {
+        throw err
+      }
     } finally {
       setSaving(false)
     }
@@ -201,11 +253,37 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
                 <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('stepBasics')}</p>
                 <div className="mt-4 space-y-4">
                   <Field label={t('displayName')} value={draftProfile.displayName} onChange={(v) => setDraftProfile({ ...draftProfile, displayName: v })} />
-                  <Field
-                    label={t('username')}
-                    value={draftProfile.username}
-                    onChange={(v) => setDraftProfile({ ...draftProfile, username: v.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
-                  />
+                  <div className="space-y-1.5">
+                    <Field
+                      label={t('username')}
+                      value={draftProfile.username}
+                      onChange={(v) => setDraftProfile({ ...draftProfile, username: v.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                    />
+                    {usernameStatus === 'checking' && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <Loader2 className="size-3 animate-spin" />
+                        {t('usernameChecking')}
+                      </p>
+                    )}
+                    {usernameStatus === 'available' && draftProfile.username !== profile.username && (
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5">
+                        <Check className="size-3" />
+                        {t('usernameAvailable')}
+                      </p>
+                    )}
+                    {usernameStatus === 'taken' && (
+                      <p role="alert" className="text-xs text-destructive font-medium flex items-center gap-1.5">
+                        <span>✕</span>
+                        {t('usernameTaken')}
+                      </p>
+                    )}
+                    {usernameStatus === 'invalid' && draftProfile.username.length > 0 && draftProfile.username !== profile.username && (
+                      <p role="alert" className="text-xs text-destructive font-medium flex items-center gap-1.5">
+                        <span>✕</span>
+                        {t('usernameInvalid')}
+                      </p>
+                    )}
+                  </div>
                   <Field label={t('headline')} value={draftProfile.headline} onChange={(v) => setDraftProfile({ ...draftProfile, headline: v })} />
                   <Field label={t('bio')} value={draftProfile.bio} onChange={(v) => setDraftProfile({ ...draftProfile, bio: v })} area />
                   <Field label={t('website')} value={draftProfile.website} onChange={(v) => setDraftProfile({ ...draftProfile, website: v })} />
@@ -253,7 +331,7 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
 
           {kind === 'appearance' && (
             <div className="rounded-2xl border bg-card p-6 shadow-xs">
-              <AppearanceControls draft={draftProfile} onChange={setDraftProfile} uid={uid} />
+              <AppearanceControls draft={draftProfile} onChange={setDraftProfile} savedProfile={profile} uid={uid} />
             </div>
           )}
 
@@ -264,6 +342,14 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
                   <Link2 className="mx-auto size-6 text-muted-foreground" />
                   <p className="mt-3 text-sm font-medium">{t('noLinksYet')}</p>
                   <p className="mt-1 text-sm text-muted-foreground">{t('noLinksYetHint')}</p>
+                  <button
+                    type="button"
+                    onClick={addLink}
+                    className="mt-4 inline-flex min-h-[40px] items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition hover:opacity-90"
+                  >
+                    <Plus className="size-3.5" />
+                    {t('addLink')}
+                  </button>
                 </div>
               )}
               {draftLinks.map((item, index) => (
@@ -444,6 +530,14 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
                   <Layers className="mx-auto size-6 text-muted-foreground" />
                   <p className="mt-3 text-sm font-medium">{t('noProjectsYet')}</p>
                   <p className="mt-1 text-sm text-muted-foreground">{t('noProjectsYetHint')}</p>
+                  <button
+                    type="button"
+                    onClick={addProject}
+                    className="mt-4 inline-flex min-h-[40px] items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition hover:opacity-90"
+                  >
+                    <Plus className="size-3.5" />
+                    {t('addProject')}
+                  </button>
                 </div>
               )}
               {draftProjects.map((item, index) => (

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { ArrowLeft, ArrowUpRight, Globe2, Loader2 } from 'lucide-react'
-import { auth, firebaseEnabled, loadProfileByUsername, saveProfile } from '@/lib/firebase'
+import { auth, claimUniqueUsername, firebaseEnabled, saveProfile } from '@/lib/firebase'
 import { LanguageSwitcher, useI18n, type Language } from '@/components/i18n-provider'
 import { LegalDialog } from '@/components/legal-content'
 import { siteHost } from '@/lib/site'
@@ -55,27 +55,12 @@ function friendlyAuthError(err: any, t: (key: string) => string): string {
   }
 }
 
-async function ensureUniqueUsername(base: string): Promise<string> {
-  if (!firebaseEnabled) return base
-  let candidate = base
-  for (let attempt = 0; attempt < 5; attempt++) {
-    try {
-      const existing = await loadProfileByUsername(candidate)
-      if (!existing) return candidate
-    } catch {
-      return candidate
-    }
-    candidate = `${base}${Math.floor(1000 + Math.random() * 9000)}`
-  }
-  return candidate
-}
-
 export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
   const router = useRouter(); const { language, t } = useI18n(); const c = copy[language]; const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [name, setName] = useState(''); const [accepted, setAccepted] = useState(false); const [legal, setLegal] = useState<'terms' | 'privacy' | null>(null); const [error, setError] = useState(''); const [busy, setBusy] = useState(false)
   async function finish(result: { user: { uid: string; displayName: string | null; email: string | null } }) {
     if (mode === 'signup') {
       const base = (result.user.email?.split('@')[0] || crypto.randomUUID().slice(0, 8)).toLowerCase().replace(/[^a-z0-9]/g, '') || 'creator'
-      const username = await ensureUniqueUsername(base)
+      const username = await claimUniqueUsername(result.user.uid, base)
       await saveProfile(result.user.uid, { displayName: name || result.user.displayName || result.user.email?.split('@')[0] || 'Pexiloq creator', username, email: result.user.email || '' })
     }
     router.push('/dashboard')

@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Dedicated collection for atomic username reservations
+    match /usernames/{username} {
+      // Anyone can read to check availability or resolve usernames
+      allow read: if true;
+      // Authenticated users can create a username document for themselves
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid;
+      // Users can only update their own username reservation
+      allow update: if request.auth != null
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid;
+      // Users can only delete their own old username reservation
+      allow delete: if request.auth != null
+        && resource.data.uid == request.auth.uid;
+    }
+
+    // User profile documents
+    match /users/{userId} {
+      allow read: if true;
+      // Allow user writes only if they own the doc AND the requested username is claimed by them in usernames/{username}
+      allow write: if request.auth != null && request.auth.uid == userId
+        && (
+          !request.resource.data.keys().hasAny(['username'])
+          || (resource != null && request.resource.data.username == resource.data.username)
+          || get(/databases/$(database)/documents/usernames/$(request.resource.data.username)).data.uid == request.auth.uid
+        );
+
+      match /{sub=**} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Analytics tracking documents
+    match /analytics/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if true;
+      allow update: if request.resource.data.keys().hasOnly(['views', 'links', 'projects', 'socials']);
+      allow delete: if false;
+
+      match /{sub=**} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow create: if true;
+        allow update: if request.resource.data.keys().hasOnly(['views', 'links', 'projects', 'socials']);
+        allow delete: if false;
+      }
+    }
+  }
+}
