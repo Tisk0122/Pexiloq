@@ -253,14 +253,14 @@ export function LegalDialog({ kind, onClose }: { kind: LegalKind; onClose: () =>
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = '' }
   }, [onClose])
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-6" onMouseDown={onClose} role="presentation">
-      <div role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()} className="flex max-h-[88dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-background shadow-xl sm:rounded-3xl">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))]" onMouseDown={onClose} role="presentation">
+      <div role="dialog" aria-modal="true" aria-labelledby="legal-dialog-title" onMouseDown={(e) => e.stopPropagation()} className="flex max-h-[88dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-background shadow-xl sm:rounded-3xl">
         <div className="flex items-center justify-between gap-4 border-b px-6 py-4">
           <div className="min-w-0">
             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">pexiloq / {kind === 'terms' ? t('terms') : t('privacy')}</p>
-            <h2 className="mt-1 truncate text-lg font-medium tracking-[-0.03em]">{doc.title}</h2>
+            <h2 id="legal-dialog-title" className="mt-1 truncate text-lg font-medium tracking-[-0.03em]">{doc.title}</h2>
           </div>
-          <button onClick={onClose} aria-label={t('close')} className="shrink-0 rounded-full border p-2 text-muted-foreground transition hover:border-foreground/40 hover:text-foreground"><X className="size-4" /></button>
+          <button onClick={onClose} aria-label={t('close')} className="grid size-11 min-h-[44px] min-w-[44px] place-items-center shrink-0 rounded-full border text-muted-foreground transition hover:border-foreground/40 hover:text-foreground"><X className="size-4" /></button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 leading-7">
           <p className="text-xs text-muted-foreground">{doc.updated}</p>
