@@ -10,20 +10,22 @@ import { CardImg } from '../preview/profile-card'
 import {
   linkDisplayStyles,
   linkEmojis,
-  socialPlatforms,
   type LinkItem,
   type Project,
-  type SocialPlatform,
 } from '../types'
 import { faviconFor, socialMeta } from '../ui/helpers'
 import { deleteStoredImage, Field, ImageUploader } from '../ui/image-uploader'
+import { Button } from '../ui/button'
+import { ConfirmDialog } from '../ui/modal'
+import { useToast } from '../ui/toast'
 import { useWorkspace } from '../workspace-provider'
 import { AppearanceControls } from './appearance-controls'
+import { socialPlatforms } from '../types'
 
 export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'appearance' }) {
   const { profile, links, projects, persistProfile, persistLinks, persistProjects, uid } = useWorkspace()
   const { t } = useI18n()
-  const [notice, setNotice] = useState('')
+  const { toast } = useToast()
   const [saving, setSaving] = useState(false)
   const [draftProfile, setDraftProfile] = useState(profile)
   const [draftLinks, setDraftLinks] = useState(links)
@@ -31,6 +33,7 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor')
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle')
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'link' | 'project'; item: LinkItem | Project } | null>(null)
 
   useEffect(() => {
     if (kind !== 'profile') return
@@ -95,8 +98,7 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
         if (candidate !== profile.username) {
           if (usernameStatus === 'taken' || !candidate || candidate.length < 2) {
             setDraftProfile((prev) => ({ ...prev, username: profile.username }))
-            setNotice(t('usernameTaken'))
-            window.setTimeout(() => setNotice(''), 3000)
+            toast(t('usernameTaken'), 'error')
             await persistProfile({ ...draftProfile, username: profile.username })
             return
           }
@@ -108,19 +110,14 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
     } catch (err: any) {
       if (err?.message === 'USERNAME_TAKEN' || String(err).includes('USERNAME_TAKEN')) {
         setDraftProfile((prev) => ({ ...prev, username: profile.username }))
-        setNotice(t('usernameTaken'))
-        window.setTimeout(() => setNotice(''), 3000)
+        toast(t('usernameTaken'), 'error')
       } else {
+        toast(t('somethingWrong'), 'error')
         throw err
       }
     } finally {
       setSaving(false)
     }
-  }
-
-  const showSaved = () => {
-    setNotice(t('saved'))
-    window.setTimeout(() => setNotice(''), 2000)
   }
 
   const flushNow = async () => {
@@ -143,8 +140,7 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
     timer.current = window.setTimeout(async () => {
       timer.current = null
       await persistNow()
-      showSaved()
-    }, 600)
+    }, 800)
   }, [draftProfile, draftLinks, draftProjects])
 
   const latest = useRef({ profile: draftProfile, links: draftLinks, projects: draftProjects })
@@ -168,7 +164,23 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
 
   async function save() {
     await flushNow()
-    showSaved()
+    toast(t('saved'), 'success')
+  }
+
+  const confirmItemDelete = async () => {
+    if (!deleteTarget) return
+    if (deleteTarget.type === 'link') {
+      const link = deleteTarget.item as LinkItem
+      void deleteStoredImage(uid, link.imageURL)
+      setDraftLinks(draftLinks.filter((x) => x.id !== link.id))
+      toast(t('deleteLink'), 'info')
+    } else {
+      const proj = deleteTarget.item as Project
+      void deleteStoredImage(uid, proj.imageURL)
+      setDraftProjects(draftProjects.filter((x) => x.id !== proj.id))
+      toast(t('deleteProject'), 'info')
+    }
+    setDeleteTarget(null)
   }
 
   const addLink = () => setDraftLinks([...draftLinks, { id: crypto.randomUUID(), title: '', url: 'https://', visible: true }])
@@ -185,33 +197,20 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
         description={descriptions[kind]}
         action={
           <div className="flex flex-col items-end gap-1.5">
-            <button
+            <Button
               onClick={save}
+              loading={saving}
               disabled={saving}
-              className="flex min-h-[44px] items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground disabled:opacity-60"
+              className="rounded-full shadow-xs"
             >
-              {saving ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  {t('saving')}
-                </>
-              ) : (
-                <>
-                  <Save className="size-4" />
-                  {notice || t('save')}
-                </>
-              )}
-            </button>
+              <Save className="size-4 mr-1.5" />
+              {t('save')}
+            </Button>
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
               {saving ? (
                 <>
                   <Loader2 className="size-3 animate-spin" />
                   {t('autosaving')}
-                </>
-              ) : notice ? (
-                <>
-                  <Check className="size-3" />
-                  {t('autosaved')}
                 </>
               ) : (
                 t('autosaveHint')
@@ -226,7 +225,7 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
         <button
           type="button"
           onClick={() => setMobileTab('editor')}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 text-xs font-semibold transition ${
+          className={`flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-full text-xs font-semibold transition ${
             mobileTab === 'editor' ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
           }`}
         >
@@ -235,7 +234,7 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
         <button
           type="button"
           onClick={() => setMobileTab('preview')}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 text-xs font-semibold transition ${
+          className={`flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-full text-xs font-semibold transition ${
             mobileTab === 'preview' ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
           }`}
         >
@@ -277,12 +276,6 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
                         {t('usernameTaken')}
                       </p>
                     )}
-                    {usernameStatus === 'invalid' && draftProfile.username.length > 0 && draftProfile.username !== profile.username && (
-                      <p role="alert" className="text-xs text-destructive font-medium flex items-center gap-1.5">
-                        <span>✕</span>
-                        {t('usernameInvalid')}
-                      </p>
-                    )}
                   </div>
                   <Field label={t('headline')} value={draftProfile.headline} onChange={(v) => setDraftProfile({ ...draftProfile, headline: v })} />
                   <Field label={t('bio')} value={draftProfile.bio} onChange={(v) => setDraftProfile({ ...draftProfile, bio: v })} area />
@@ -297,18 +290,8 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
                   </div>
                   <div className="grid flex-1 gap-2">
                     <ImageUploader uid={uid} maxDimension={512} value={draftProfile.photoURL} shape="circle" aspect={1} onUploaded={(url) => setDraftProfile({ ...draftProfile, photoURL: url })} />
-                    <details className="text-xs text-muted-foreground">
-                      <summary className="cursor-pointer select-none">{t('orPasteUrl')}</summary>
-                      <input
-                        value={draftProfile.photoURL || ''}
-                        onChange={(e) => setDraftProfile({ ...draftProfile, photoURL: e.target.value.trim() })}
-                        className="mt-2 w-full rounded-lg border bg-background px-3 py-2 text-base sm:text-sm"
-                        placeholder="https://…"
-                      />
-                    </details>
                   </div>
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">{t('photoFitHint')}</p>
               </div>
               <div className="border-t pt-6">
                 <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('socialLinks')}</p>
@@ -342,14 +325,10 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
                   <Link2 className="mx-auto size-6 text-muted-foreground" />
                   <p className="mt-3 text-sm font-medium">{t('noLinksYet')}</p>
                   <p className="mt-1 text-sm text-muted-foreground">{t('noLinksYetHint')}</p>
-                  <button
-                    type="button"
-                    onClick={addLink}
-                    className="mt-4 inline-flex min-h-[40px] items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition hover:opacity-90"
-                  >
-                    <Plus className="size-3.5" />
+                  <Button type="button" onClick={addLink} size="sm" className="mt-4 rounded-full">
+                    <Plus className="size-3.5 mr-1" />
                     {t('addLink')}
-                  </button>
+                  </Button>
                 </div>
               )}
               {draftLinks.map((item, index) => (
@@ -370,25 +349,24 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
                       <span className="rounded-md bg-secondary px-2 py-0.5 font-mono text-xs font-semibold text-muted-foreground">
                         #{index + 1}
                       </span>
-                      {/* Movement buttons */}
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
                           disabled={index === 0}
                           onClick={() => moveItem(draftLinks, setDraftLinks, index, -1)}
                           aria-label="Move link up"
-                          className="grid size-8 place-items-center rounded-md border text-muted-foreground transition hover:text-foreground disabled:opacity-30"
+                          className="grid size-9 place-items-center rounded-md border text-muted-foreground transition hover:text-foreground disabled:opacity-30"
                         >
-                          <ArrowUp className="size-3.5" />
+                          <ArrowUp className="size-4" />
                         </button>
                         <button
                           type="button"
                           disabled={index === draftLinks.length - 1}
                           onClick={() => moveItem(draftLinks, setDraftLinks, index, 1)}
                           aria-label="Move link down"
-                          className="grid size-8 place-items-center rounded-md border text-muted-foreground transition hover:text-foreground disabled:opacity-30"
+                          className="grid size-9 place-items-center rounded-md border text-muted-foreground transition hover:text-foreground disabled:opacity-30"
                         >
-                          <ArrowDown className="size-3.5" />
+                          <ArrowDown className="size-4" />
                         </button>
                       </div>
                       {faviconFor(item.url) && (
@@ -404,11 +382,8 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
                         {item.visible ? t('visible') : t('hidden')}
                       </button>
                       <button
-                        className="grid size-9 place-items-center text-muted-foreground transition hover:text-destructive"
-                        onClick={() => {
-                          void deleteStoredImage(uid, item.imageURL)
-                          setDraftLinks(draftLinks.filter((x) => x.id !== item.id))
-                        }}
+                        className="grid size-11 place-items-center rounded-lg text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => setDeleteTarget({ type: 'link', item })}
                         aria-label={t('deleteLink')}
                       >
                         <Trash2 className="size-4" />
@@ -421,13 +396,13 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
                       <input
                         value={item.title}
                         onChange={(e) => setDraftLinks(draftLinks.map((x) => (x.id === item.id ? { ...x, title: e.target.value } : x)))}
-                        className="rounded-lg border bg-background px-3 py-2 text-base sm:text-sm"
+                        className="rounded-lg border bg-background px-3 py-2 text-base sm:text-sm min-h-[44px]"
                         placeholder={t('linkTitle')}
                       />
                       <input
                         value={item.url}
                         onChange={(e) => setDraftLinks(draftLinks.map((x) => (x.id === item.id ? { ...x, url: e.target.value } : x)))}
-                        className="rounded-lg border bg-background px-3 py-2 text-base sm:text-sm"
+                        className="rounded-lg border bg-background px-3 py-2 text-base sm:text-sm min-h-[44px]"
                         placeholder="https://"
                       />
                     </div>
@@ -436,7 +411,7 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
                         value={item.icon || ''}
                         maxLength={4}
                         onChange={(e) => setDraftLinks(draftLinks.map((x) => (x.id === item.id ? { ...x, icon: e.target.value.trim() } : x)))}
-                        className="w-14 rounded-lg border bg-background px-2 py-2 text-center text-lg shrink-0"
+                        className="w-14 rounded-lg border bg-background px-2 py-2 text-center text-lg shrink-0 min-h-[44px]"
                         placeholder={t('emoji')}
                         aria-label={t('emoji')}
                       />
@@ -447,7 +422,7 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
                             type="button"
                             onClick={() => setDraftLinks(draftLinks.map((x) => (x.id === item.id ? { ...x, icon: x.icon === emoji ? '' : emoji } : x)))}
                             aria-pressed={item.icon === emoji}
-                            className={`min-h-[36px] min-w-[36px] shrink-0 rounded-md p-1.5 text-base transition ${item.icon === emoji ? 'bg-secondary ring-1 ring-foreground/20' : 'hover:bg-secondary/60'}`}
+                            className={`min-h-[44px] min-w-[44px] shrink-0 rounded-md p-1.5 text-base transition ${item.icon === emoji ? 'bg-secondary ring-1 ring-foreground/20' : 'hover:bg-secondary/60'}`}
                           >
                             {emoji}
                           </button>
@@ -470,56 +445,13 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
                         </button>
                       ))}
                     </div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <label className="inline-flex min-h-[36px] items-center gap-2 rounded-full border px-3 py-1.5 text-xs text-muted-foreground">
-                        <input
-                          type="color"
-                          value={item.bgColor || '#ffffff'}
-                          onChange={(e) => setDraftLinks(draftLinks.map((x) => (x.id === item.id ? { ...x, bgColor: e.target.value } : x)))}
-                          className="size-4 cursor-pointer appearance-none rounded-full border border-border p-0"
-                          aria-label={t('linkBgColor')}
-                        />
-                        <span>{t('linkBgColor')}</span>
-                      </label>
-                      {item.bgColor && (
-                        <button type="button" onClick={() => setDraftLinks(draftLinks.map((x) => (x.id === item.id ? { ...x, bgColor: '' } : x)))} className="text-xs text-muted-foreground underline underline-offset-4">
-                          {t('bgDefault')}
-                        </button>
-                      )}
-                      <label className="inline-flex min-h-[36px] items-center gap-2 rounded-full border px-3 py-1.5 text-xs text-muted-foreground">
-                        <input
-                          type="color"
-                          value={item.iconColor || '#171717'}
-                          onChange={(e) => setDraftLinks(draftLinks.map((x) => (x.id === item.id ? { ...x, iconColor: e.target.value } : x)))}
-                          className="size-4 cursor-pointer appearance-none rounded-full border border-border p-0"
-                          aria-label={t('linkIconColor')}
-                        />
-                        <span>{t('linkIconColor')}</span>
-                      </label>
-                      {item.iconColor && (
-                        <button type="button" onClick={() => setDraftLinks(draftLinks.map((x) => (x.id === item.id ? { ...x, iconColor: '' } : x)))} className="text-xs text-muted-foreground underline underline-offset-4">
-                          {t('bgDefault')}
-                        </button>
-                      )}
-                    </div>
-                    {item.displayStyle === 'thumbnail' && (
-                      <div className="grid gap-2 border-t pt-2 md:grid-cols-2">
-                        <input
-                          value={item.imageURL || ''}
-                          onChange={(e) => setDraftLinks(draftLinks.map((x) => (x.id === item.id ? { ...x, imageURL: e.target.value.trim() } : x)))}
-                          className="rounded-lg border bg-background px-3 py-2 text-base sm:text-sm"
-                          placeholder={t('linkThumbnailUrl')}
-                        />
-                        <ImageUploader uid={uid} maxDimension={512} value={item.imageURL} shape="rect" aspect={1} onUploaded={(url) => setDraftLinks(draftLinks.map((x) => (x.id === item.id ? { ...x, imageURL: url } : x)))} />
-                      </div>
-                    )}
                   </div>
                 </div>
               ))}
-              <button onClick={addLink} className="flex min-h-[44px] items-center rounded-full border px-5 py-2.5 text-sm font-medium transition hover:border-foreground/40">
+              <Button onClick={addLink} variant="outline" className="rounded-full">
                 <Plus className="mr-1.5 size-4" />
                 {t('addLink')}
-              </button>
+              </Button>
             </div>
           )}
 
@@ -530,14 +462,10 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
                   <Layers className="mx-auto size-6 text-muted-foreground" />
                   <p className="mt-3 text-sm font-medium">{t('noProjectsYet')}</p>
                   <p className="mt-1 text-sm text-muted-foreground">{t('noProjectsYetHint')}</p>
-                  <button
-                    type="button"
-                    onClick={addProject}
-                    className="mt-4 inline-flex min-h-[40px] items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition hover:opacity-90"
-                  >
-                    <Plus className="size-3.5" />
+                  <Button type="button" onClick={addProject} size="sm" className="mt-4 rounded-full">
+                    <Plus className="size-3.5 mr-1" />
                     {t('addProject')}
-                  </button>
+                  </Button>
                 </div>
               )}
               {draftProjects.map((item, index) => (
@@ -564,29 +492,26 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
                           disabled={index === 0}
                           onClick={() => moveItem(draftProjects, setDraftProjects, index, -1)}
                           aria-label="Move project up"
-                          className="grid size-8 place-items-center rounded-md border text-muted-foreground transition hover:text-foreground disabled:opacity-30"
+                          className="grid size-9 place-items-center rounded-md border text-muted-foreground transition hover:text-foreground disabled:opacity-30"
                         >
-                          <ArrowUp className="size-3.5" />
+                          <ArrowUp className="size-4" />
                         </button>
                         <button
                           type="button"
                           disabled={index === draftProjects.length - 1}
                           onClick={() => moveItem(draftProjects, setDraftProjects, index, 1)}
                           aria-label="Move project down"
-                          className="grid size-8 place-items-center rounded-md border text-muted-foreground transition hover:text-foreground disabled:opacity-30"
+                          className="grid size-9 place-items-center rounded-md border text-muted-foreground transition hover:text-foreground disabled:opacity-30"
                         >
-                          <ArrowDown className="size-3.5" />
+                          <ArrowDown className="size-4" />
                         </button>
                       </div>
                       <span className="text-sm font-medium">{t('project')}</span>
                     </div>
                     <button
-                      onClick={() => {
-                        void deleteStoredImage(uid, item.imageURL)
-                        setDraftProjects(draftProjects.filter((x) => x.id !== item.id))
-                      }}
+                      onClick={() => setDeleteTarget({ type: 'project', item })}
                       aria-label={t('deleteProject')}
-                      className="grid size-9 place-items-center text-muted-foreground transition hover:text-destructive"
+                      className="grid size-11 place-items-center rounded-lg text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
                     >
                       <Trash2 className="size-4" />
                     </button>
@@ -595,13 +520,13 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
                     <input
                       value={item.title}
                       onChange={(e) => setDraftProjects(draftProjects.map((x) => (x.id === item.id ? { ...x, title: e.target.value } : x)))}
-                      className="rounded-lg border bg-background px-3 py-2 text-base sm:text-sm"
+                      className="rounded-lg border bg-background px-3 py-2 text-base sm:text-sm min-h-[44px]"
                       placeholder={t('projectTitle')}
                     />
                     <input
                       value={item.url}
                       onChange={(e) => setDraftProjects(draftProjects.map((x) => (x.id === item.id ? { ...x, url: e.target.value } : x)))}
-                      className="rounded-lg border bg-background px-3 py-2 text-base sm:text-sm"
+                      className="rounded-lg border bg-background px-3 py-2 text-base sm:text-sm min-h-[44px]"
                       placeholder={t('projectUrl')}
                     />
                     <textarea
@@ -610,28 +535,13 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
                       className="min-h-24 rounded-lg border bg-background px-3 py-2 text-base sm:text-sm md:col-span-2"
                       placeholder={t('description')}
                     />
-                    <input
-                      value={item.imageURL || ''}
-                      onChange={(e) => setDraftProjects(draftProjects.map((x) => (x.id === item.id ? { ...x, imageURL: e.target.value.trim() } : x)))}
-                      className="rounded-lg border bg-background px-3 py-2 text-base sm:text-sm md:col-span-2"
-                      placeholder="Image URL (optional) — https://"
-                    />
-                    <ImageUploader
-                      uid={uid}
-                      maxDimension={1024}
-                      value={item.imageURL}
-                      shape="rect"
-                      aspect={16 / 9}
-                      onUploaded={(url) => setDraftProjects(draftProjects.map((x) => (x.id === item.id ? { ...x, imageURL: url } : x)))}
-                      className="md:col-span-2"
-                    />
                   </div>
                 </div>
               ))}
-              <button onClick={addProject} className="flex min-h-[44px] items-center rounded-full border px-5 py-2.5 text-sm font-medium transition hover:border-foreground/40">
+              <Button onClick={addProject} variant="outline" className="rounded-full">
                 <Plus className="mr-1.5 size-4" />
                 {t('addProject')}
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -641,6 +551,16 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
           <LivePreview profile={draftProfile} links={draftLinks} projects={draftProjects} />
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmItemDelete}
+        title={deleteTarget?.type === 'link' ? t('deleteLink') : t('deleteProject')}
+        description={t('deleteWarning')}
+        confirmText={t('confirmDelete')}
+        cancelText={t('cancel')}
+      />
     </>
   )
 }

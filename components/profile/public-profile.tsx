@@ -9,7 +9,7 @@ import { Logo } from '../logo'
 import { pageBackgroundStyle } from '../preview/live-preview'
 import { ProfileCard } from '../preview/profile-card'
 import { normalizeProfile, type LinkItem, type Profile, type Project } from '../types'
-import { LoadingScreen } from '../ui/loader'
+import { ProfileSkeleton } from '../ui/skeleton'
 import { useAuth } from '../workspace-provider'
 
 const PUBLIC_PROFILE_CACHE_MS = 60_000
@@ -112,7 +112,21 @@ export function PublicProfile({ username }: { username?: string }) {
     }
   }, [pageUid, isPublicProfile])
 
-  if (data === null) return <LoadingScreen />
+  if (data === null) {
+    return (
+      <main className="relative min-h-screen px-5 py-8 sm:py-10 bg-background text-foreground">
+        <div className="relative mx-auto max-w-2xl">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Logo />
+            <div className="h-11 w-32 animate-pulse rounded-full bg-secondary" />
+          </div>
+          <div className="mt-12">
+            <ProfileSkeleton />
+          </div>
+        </div>
+      </main>
+    )
+  }
 
   const track = (type: 'links' | 'projects' | 'socials', key: string) => {
     if (!pageUid) return

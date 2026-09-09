@@ -58,10 +58,16 @@
 
 * { @apply border-border; }
 *:focus-visible {
-  outline: 2px solid var(--ring);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(23, 23, 23, 0.12);
 }
 button:not(:disabled) { cursor: pointer; }
+/* Enforce minimum touch target height/width for primary interactive buttons/inputs */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
 html { scroll-behavior: smooth; }
 html, body { max-width: 100vw; overflow-x: clip; }
 body { @apply bg-background text-foreground font-sans antialiased; }

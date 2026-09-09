@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { ArrowUpRight, Eye, Layers, Link2, Palette, UserRound, Zap } from 'lucide-react'
 import { useI18n } from '@/components/i18n-provider'
 import { loadAnalytics } from '@/lib/firebase'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import { LivePreview } from '../preview/live-preview'
 import { socialPlatforms } from '../types'
 import { socialMeta } from '../ui/helpers'
@@ -13,13 +15,13 @@ import { useWorkspace } from '../workspace-provider'
 
 export function Stat({ label, value, accent, icon: Icon }: { label: string; value: string; accent?: string; icon?: React.ComponentType<{ className?: string }> }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border bg-card p-5 shadow-xs transition hover:border-foreground/20">
+    <Card className="relative overflow-hidden p-5 transition-all duration-200 hover:border-foreground/20">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-muted-foreground">{label}</p>
+        <p className="text-xs font-semibold text-muted-foreground">{label}</p>
         {Icon && <Icon className="size-4 text-muted-foreground/60" />}
       </div>
       <p className="mt-3 text-3xl font-medium tracking-[-0.06em]" style={{ color: accent || 'currentColor' }}>{value}</p>
-    </div>
+    </Card>
   )
 }
 
@@ -82,13 +84,11 @@ export function Overview() {
         title={`${t('goodToSee')}, ${profile.displayName.split(' ')[0] || 'Creator'}.`}
         description={t('calmPlace')}
         action={
-          <Link
-            href={`/${profile.username}`}
-            target="_blank"
-            className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-xs transition hover:opacity-90"
-          >
-            {t('viewProfile')} <ArrowUpRight className="size-4" />
-          </Link>
+          <Button asChild className="rounded-full min-h-[44px]">
+            <Link href={`/${profile.username}`} target="_blank">
+              {t('viewProfile')} <ArrowUpRight className="size-4 ml-1" />
+            </Link>
+          </Button>
         }
       />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
@@ -111,13 +111,12 @@ export function Overview() {
             <Zap className="size-8 text-muted-foreground/60" />
             <p className="mt-2 text-sm font-medium">{t('noClicksYet')}</p>
             <p className="mt-1 text-xs text-muted-foreground">Share your public link to start tracking profile analytics.</p>
-            <Link
-              href="/dashboard/links"
-              className="mt-3.5 inline-flex min-h-[36px] items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground shadow-xs transition hover:opacity-90"
-            >
-              <Link2 className="size-3.5" />
-              {t('addFirstLink')}
-            </Link>
+            <Button asChild size="sm" className="mt-4 rounded-full">
+              <Link href="/dashboard/links">
+                <Link2 className="size-3.5 mr-1" />
+                {t('addFirstLink')}
+              </Link>
+            </Button>
           </div>
         ) : (
           <div className="mt-6 space-y-3.5">
@@ -140,7 +139,7 @@ export function Overview() {
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/80">{t('livePreview')}</p>
               <h2 className="mt-1 text-lg font-medium tracking-[-0.03em]">{t('thisWorld')}</h2>
             </div>
-            <Link href="/dashboard/profile" className="inline-flex items-center gap-1 text-xs font-medium underline underline-offset-4 hover:opacity-80">
+            <Link href="/dashboard/profile" className="inline-flex min-h-[44px] items-center gap-1 text-xs font-medium underline underline-offset-4 hover:opacity-80">
               {t('edit')} <ArrowUpRight className="size-3" />
             </Link>
           </div>
@@ -163,7 +162,7 @@ export function Overview() {
                 <Link
                   href={href}
                   key={href}
-                  className="group flex min-h-[44px] items-center justify-between rounded-xl border bg-card p-3.5 transition hover:border-foreground/30 hover:shadow-xs"
+                  className="group flex min-h-[48px] items-center justify-between rounded-xl border bg-card p-3.5 transition hover:border-foreground/30 hover:shadow-xs"
                 >
                   <span className="flex items-center gap-3 text-xs font-medium">
                     <Icon className="size-4 text-muted-foreground transition group-hover:text-foreground" />

@@ -8,6 +8,8 @@ import { auth, claimUniqueUsername, firebaseEnabled, saveProfile } from '@/lib/f
 import { LanguageSwitcher, useI18n, type Language } from '@/components/i18n-provider'
 import { LegalDialog } from '@/components/legal-content'
 import { siteHost } from '@/lib/site'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { createUserWithEmailAndPassword, GoogleAuthProvider, sendEmailVerification, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth'
 
 const copy: Record<Language, Record<string, string>> = {
@@ -26,13 +28,6 @@ function GoogleIcon() { return <svg aria-hidden="true" viewBox="0 0 24 24" class
 
 function providerFor() { return new GoogleAuthProvider() }
 
-// Firebase Auth errors arrive as technical codes like "auth/invalid-credential" or raw
-// English messages ("Firebase: Error (auth/too-many-requests)."). Showing that directly
-// breaks two rules at once: it's unreadable for non-technical or non-English-speaking
-// users, and it doesn't tell them what to actually do next. This maps the handful of
-// codes people realistically hit to a short, localized, actionable message, and falls
-// back to a generic "something went wrong" for anything unexpected rather than ever
-// surfacing Firebase's own wording.
 function friendlyAuthError(err: any, t: (key: string) => string): string {
   const code: string = err?.code || ''
   switch (code) {
@@ -56,7 +51,17 @@ function friendlyAuthError(err: any, t: (key: string) => string): string {
 }
 
 export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
-  const router = useRouter(); const { language, t } = useI18n(); const c = copy[language]; const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [name, setName] = useState(''); const [accepted, setAccepted] = useState(false); const [legal, setLegal] = useState<'terms' | 'privacy' | null>(null); const [error, setError] = useState(''); const [busy, setBusy] = useState(false)
+  const router = useRouter()
+  const { language, t } = useI18n()
+  const c = copy[language]
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
+  const [accepted, setAccepted] = useState(false)
+  const [legal, setLegal] = useState<'terms' | 'privacy' | null>(null)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+
   async function finish(result: { user: { uid: string; displayName: string | null; email: string | null } }) {
     if (mode === 'signup') {
       const base = (result.user.email?.split('@')[0] || crypto.randomUUID().slice(0, 8)).toLowerCase().replace(/[^a-z0-9]/g, '') || 'creator'
@@ -65,6 +70,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
     }
     router.push('/dashboard')
   }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (mode === 'signup' && !accepted) { setError(c.required); return }
@@ -92,16 +98,30 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
       setBusy(false)
     }
   }
-  async function oauth() { if (mode === 'signup' && !accepted) { setError(c.required); return }; setBusy(true); setError(''); try { if (!firebaseEnabled || !auth) { router.push('/dashboard'); return }; await finish(await signInWithPopup(auth, providerFor())) } catch (err: any) { setError(err.code === 'auth/popup-closed-by-user' ? '' : friendlyAuthError(err, t)) } finally { setBusy(false) } }
+
+  async function oauth() {
+    if (mode === 'signup' && !accepted) { setError(c.required); return }
+    setBusy(true)
+    setError('')
+    try {
+      if (!firebaseEnabled || !auth) { router.push('/dashboard'); return }
+      await finish(await signInWithPopup(auth, providerFor()))
+    } catch (err: any) {
+      setError(err.code === 'auth/popup-closed-by-user' ? '' : friendlyAuthError(err, t))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <main className="min-h-screen bg-background px-5 py-6 sm:px-8 sm:py-10 text-foreground">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between">
-        <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition hover:text-foreground">
+        <Link href="/" className="inline-flex min-h-[44px] items-center gap-2 text-sm font-medium text-muted-foreground transition hover:text-foreground">
           <ArrowLeft className="size-4" />{c.home}
         </Link>
         <div className="flex items-center gap-3">
           <LanguageSwitcher compact />
-          <Link href="/" aria-label={c.home} className="flex items-center">
+          <Link href="/" aria-label={c.home} className="flex items-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary">
             <img src="/Pexiloq_Logo.png" alt="Pexiloq" width={1774} height={887} className="h-10 w-auto object-contain sm:h-12" />
           </Link>
         </div>
@@ -119,15 +139,16 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
           <h1 className="mt-2 text-3xl font-medium tracking-[-0.06em] sm:text-4xl">{mode === 'login' ? c.login : c.signup}</h1>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{mode === 'login' ? c.loginBody : c.signupBody}</p>
           <div className="mt-8">
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={() => oauth()}
               disabled={busy}
-              className="flex w-full items-center justify-center gap-3 rounded-2xl border bg-card px-4 py-3.5 text-sm font-medium shadow-xs transition hover:border-foreground/30 hover:bg-secondary/40 disabled:opacity-50"
+              className="w-full rounded-2xl min-h-[48px] justify-center gap-3 border bg-card text-sm font-medium hover:bg-secondary/60"
             >
               <GoogleIcon />
               <span>{busy ? c.wait : c.google}</span>
-            </button>
+            </Button>
           </div>
           <div className="relative my-6 text-center text-xs">
             <div className="absolute inset-0 flex items-center" aria-hidden="true"><div className="w-full border-t border-border" /></div>
@@ -135,63 +156,61 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
           </div>
           <form onSubmit={submit} className="space-y-4">
             {mode === 'signup' && (
-              <label className="block text-xs font-semibold text-muted-foreground">
-                <span className="block mb-1.5">{c.name}</span>
-                <input
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full rounded-xl border bg-card px-4 py-3 text-base sm:text-sm font-normal text-foreground outline-none transition focus:border-foreground/50 shadow-xs"
-                  placeholder={c.namePlaceholder}
-                />
-              </label>
+              <Input
+                required
+                label={c.name}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={c.namePlaceholder}
+              />
             )}
-            <label className="block text-xs font-semibold text-muted-foreground">
-              <span className="block mb-1.5">{c.email}</span>
-              <input
-                required
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-xl border bg-card px-4 py-3 text-base sm:text-sm font-normal text-foreground outline-none transition focus:border-foreground/50 shadow-xs"
-                placeholder={c.emailPlaceholder}
-              />
-            </label>
-            <label className="block text-xs font-semibold text-muted-foreground">
-              <span className="block mb-1.5">{c.password}</span>
-              <input
-                required
-                minLength={6}
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl border bg-card px-4 py-3 text-base sm:text-sm font-normal text-foreground outline-none transition focus:border-foreground/50 shadow-xs"
-                placeholder={c.passwordPlaceholder}
-              />
-            </label>
+            <Input
+              required
+              type="email"
+              label={c.email}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder={c.emailPlaceholder}
+            />
+            <Input
+              required
+              minLength={6}
+              type="password"
+              label={c.password}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={c.passwordPlaceholder}
+            />
             {mode === 'signup' && (
-              <label className="flex items-start gap-3 rounded-xl border bg-secondary/40 p-3.5 text-xs leading-relaxed text-muted-foreground">
-                <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} className="mt-0.5 size-4 accent-primary rounded-sm" />
+              <label className="flex items-start gap-3 rounded-xl border bg-secondary/40 p-3.5 text-xs leading-relaxed text-muted-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={accepted}
+                  onChange={(e) => setAccepted(e.target.checked)}
+                  className="mt-0.5 size-4 accent-primary rounded-sm shrink-0"
+                />
                 <span>
                   {c.agree}{' '}
-                  <button type="button" onClick={() => setLegal('terms')} className="font-medium text-foreground underline underline-offset-2">
+                  <button type="button" onClick={() => setLegal('terms')} className="font-medium text-foreground underline underline-offset-2 hover:opacity-80">
                     {c.terms}
                   </button>{' '}
                   {c.and}{' '}
-                  <button type="button" onClick={() => setLegal('privacy')} className="font-medium text-foreground underline underline-offset-2">
+                  <button type="button" onClick={() => setLegal('privacy')} className="font-medium text-foreground underline underline-offset-2 hover:opacity-80">
                     {c.privacy}
                   </button>.
                 </span>
               </label>
             )}
             {error && <p role="alert" className="rounded-xl bg-destructive/10 px-4 py-3 text-xs font-medium text-destructive">{error}</p>}
-            <button
+            <Button
+              type="submit"
+              loading={busy}
               disabled={busy}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-3.5 text-sm font-medium text-primary-foreground shadow-xs transition hover:opacity-90 disabled:opacity-50"
+              className="w-full rounded-full min-h-[48px] text-sm font-medium shadow-sm"
             >
-              {busy ? <><Loader2 className="size-4 animate-spin" />{c.wait}</> : mode === 'login' ? c.submitLogin : c.submitSignup}
-              {!busy && <ArrowUpRight className="size-4" />}
-            </button>
+              {mode === 'login' ? c.submitLogin : c.submitSignup}
+              {!busy && <ArrowUpRight className="size-4 ml-1" />}
+            </Button>
           </form>
           <p className="mt-8 text-center text-xs text-muted-foreground">
             {mode === 'login' ? c.newHere : c.already}{' '}
