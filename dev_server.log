@@ -6,23 +6,11 @@
 - Local:         http://localhost:3000
 - Network:       http://192.168.0.2:3000
 - Environments: .env
-✓ Ready in 563ms
+✓ Ready in 550ms
 ✓ Running next.config.mjs took 26ms
 
 ○ Compiling / ...
- GET / 200 in 10.1s (next.js: 8.8s, application-code: 1348ms)
- GET / 200 in 146ms (next.js: 7ms, application-code: 139ms)
- GET /dashboard 200 in 835ms (next.js: 714ms, application-code: 122ms)
- GET /login 200 in 535ms (next.js: 489ms, application-code: 46ms)
- GET /dashboard/appearance 200 in 451ms (next.js: 367ms, application-code: 85ms)
- GET /login 200 in 43ms (next.js: 9ms, application-code: 34ms)
- GET /amira 200 in 3.0s (next.js: 2.1s, application-code: 926ms)
- GET / 200 in 139ms (next.js: 6ms, application-code: 133ms)
- GET /dashboard 200 in 102ms (next.js: 8ms, application-code: 94ms)
- GET /login 200 in 42ms (next.js: 8ms, application-code: 35ms)
- GET /dashboard/appearance 200 in 80ms (next.js: 6ms, application-code: 74ms)
- GET /login 200 in 32ms (next.js: 4ms, application-code: 28ms)
- GET /amira 200 in 311ms (next.js: 23ms, application-code: 288ms)
- GET / 200 in 107ms (next.js: 3ms, application-code: 104ms)
- GET /dashboard/profile 200 in 448ms (next.js: 368ms, application-code: 79ms)
- GET /login 200 in 43ms (next.js: 5ms, application-code: 38ms)
+ HEAD / 200 in 6.2s (next.js: 5.2s, application-code: 983ms)
+ GET / 200 in 155ms (next.js: 18ms, application-code: 137ms)
+ GET /dashboard/profile 200 in 1057ms (next.js: 904ms, application-code: 152ms)
+ GET /login 200 in 633ms (next.js: 550ms, application-code: 84ms)

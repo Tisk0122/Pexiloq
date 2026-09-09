@@ -115,9 +115,9 @@ export function LinksSection({ profile, links, skin, layout, onTrack }: { profil
 
   function linkStyle(item: LinkItem, customClass: string) {
     if (item.bgColor) {
-      return { className: `${customClass} ${radius} flex items-center justify-between text-left text-sm font-medium transition duration-200 hover:-translate-y-0.5 active:translate-y-0`, style: { backgroundColor: item.bgColor, color: contrastColor(item.bgColor) } }
+      return { className: `${customClass} ${radius} flex items-center justify-between text-left text-sm font-medium transition duration-200 hover:-translate-y-0.5 active:translate-y-0 h-full`, style: { backgroundColor: item.bgColor, color: contrastColor(item.bgColor) } }
     }
-    return { className: `${customClass} ${radius} ${buttonClass} flex items-center justify-between text-left text-sm font-medium transition duration-200 hover:-translate-y-0.5 active:translate-y-0 ${ghostHover}`, style: baseLinkStyle }
+    return { className: `${customClass} ${radius} ${buttonClass} flex items-center justify-between text-left text-sm font-medium transition duration-200 hover:-translate-y-0.5 active:translate-y-0 ${ghostHover} h-full`, style: baseLinkStyle }
   }
 
   const icon = (item: LinkItem, sizeClass = 'size-4') =>
@@ -149,7 +149,7 @@ export function LinksSection({ profile, links, skin, layout, onTrack }: { profil
           target="_blank"
           rel="noreferrer"
           onClick={() => onTrack?.('links', item.id)}
-          className="flex items-center gap-2 px-1 py-2 text-left text-sm font-medium underline underline-offset-4 transition hover:opacity-70 min-h-[44px]"
+          className="flex items-center gap-2 px-1 py-1.5 text-left text-sm font-medium underline underline-offset-4 transition hover:opacity-70 min-h-[36px]"
           style={{ color: item.bgColor || profile.accentColor }}
         >
           {icon(item, 'size-3.5')}
@@ -159,7 +159,7 @@ export function LinksSection({ profile, links, skin, layout, onTrack }: { profil
     }
     if (style === 'large') {
       return (
-        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} {...linkStyle(item, `${spacing.linkPad} min-h-16 text-base`)}>
+        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} {...linkStyle(item, `${spacing.linkPad} py-3 text-base min-h-[3.25rem]`)}>
           <span className="flex min-w-0 items-center gap-3">
             {icon(item, 'size-5')}
             <span className="truncate">{item.title}</span>
@@ -176,13 +176,13 @@ export function LinksSection({ profile, links, skin, layout, onTrack }: { profil
           target="_blank"
           rel="noreferrer"
           onClick={() => onTrack?.('links', item.id)}
-          className={`flex min-h-[56px] items-center gap-4 rounded-2xl border p-3 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 ${skin.bar}`}
+          className={`flex min-h-[48px] items-center gap-3.5 rounded-2xl border p-2.5 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 ${skin.bar}`}
           style={item.bgColor ? { backgroundColor: item.bgColor, color: contrastColor(item.bgColor) } : undefined}
         >
           {item.imageURL ? (
-            <CardImg src={item.imageURL} alt={item.title} className="size-14 shrink-0 rounded-xl" />
+            <CardImg src={item.imageURL} alt={item.title} className="size-12 shrink-0 rounded-xl" />
           ) : (
-            <span className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-xl bg-secondary text-lg">{icon(item, 'size-6')}</span>
+            <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-secondary text-base">{icon(item, 'size-5')}</span>
           )}
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium">{item.title}</span>
@@ -195,15 +195,15 @@ export function LinksSection({ profile, links, skin, layout, onTrack }: { profil
 
     if (fallback === 'grid') {
       return (
-        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} {...linkStyle(item, `min-h-20 flex-col justify-center gap-2 px-3 py-4 text-center`)}>
-          <span className="text-xl leading-none">
+        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} {...linkStyle(item, `min-h-[3.75rem] flex-col justify-center items-center gap-1.5 px-2.5 py-3 text-center h-full`)}>
+          <span className="text-lg leading-none">
             {item.icon || (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={faviconFor(item.url)}
                 alt=""
                 aria-hidden="true"
-                className="mx-auto size-5 rounded-sm opacity-90"
+                className="mx-auto size-4.5 rounded-sm opacity-90"
                 onError={(e) => {
                   ;(e.currentTarget as HTMLImageElement).style.display = 'none'
                 }}
@@ -216,7 +216,7 @@ export function LinksSection({ profile, links, skin, layout, onTrack }: { profil
     }
     if (fallback === 'card') {
       return (
-        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} {...linkStyle(item, `${spacing.linkPad} shadow-[0_10px_30px_rgba(35,35,30,0.08)]`)}>
+        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} {...linkStyle(item, `${spacing.linkPad} shadow-[0_10px_30px_rgba(35,35,30,0.08)] py-2.5`)}>
           <span className="flex min-w-0 items-center gap-3">
             {icon(item)}
             <span className="truncate">{item.title}</span>
@@ -227,18 +227,18 @@ export function LinksSection({ profile, links, skin, layout, onTrack }: { profil
     }
     if (fallback === 'magazine') {
       return (
-        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} className={`flex items-center gap-4 rounded-2xl border p-3 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 ${skin.bar}`}>
+        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} className={`flex items-center gap-3.5 rounded-2xl border p-2.5 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 ${skin.bar}`}>
           {item.imageURL ? (
-            <CardImg src={item.imageURL} alt={item.title} className="size-14 shrink-0 rounded-xl" />
+            <CardImg src={item.imageURL} alt={item.title} className="size-12 shrink-0 rounded-xl" />
           ) : (
-            <span className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-xl bg-secondary text-lg">
+            <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-secondary text-base">
               {item.icon || (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={faviconFor(item.url)}
                   alt=""
                   aria-hidden="true"
-                  className="size-6 rounded-sm opacity-90"
+                  className="size-5 rounded-sm opacity-90"
                   onError={(e) => {
                     ;(e.currentTarget as HTMLImageElement).style.display = 'none'
                   }}
@@ -255,7 +255,7 @@ export function LinksSection({ profile, links, skin, layout, onTrack }: { profil
       )
     }
     return (
-      <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} {...linkStyle(item, `${spacing.linkPad} min-h-[48px]`)}>
+      <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} {...linkStyle(item, `${spacing.linkPad} py-2.5 min-h-[2.75rem]`)}>
         <span className="flex min-w-0 items-center gap-3">
           {icon(item)}
           <span className="truncate">{item.title}</span>
@@ -265,9 +265,27 @@ export function LinksSection({ profile, links, skin, layout, onTrack }: { profil
     )
   }
 
-  if (layout === 'grid') {
-    return <div className={`${spacing.sectionGap} grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3`}>{visibleLinks.map((item) => renderLink(item, 'grid'))}</div>
+  // Mobile layout auto-optimization criteria for links:
+  // - Thresholds:
+  //   1) no thumbnail images or large buttons (hasThumbnails = false, hasLarge = false)
+  //   2) average title length <= 18 characters
+  //   3) at least 2 links
+  // Intent: When links are short text or emoji icons without thumbnails, switching mobile view to a 2-column grid
+  // avoids long vertical single-column scrolling and significantly improves content density and scanability on small screens.
+  const hasThumbnails = visibleLinks.some((x) => x.imageURL || x.displayStyle === 'thumbnail')
+  const hasLarge = visibleLinks.some((x) => x.displayStyle === 'large')
+  const avgTitleLen = visibleLinks.reduce((acc, x) => acc + (x.title?.length || 0), 0) / visibleLinks.length
+  const autoUseMobileGrid = !hasThumbnails && !hasLarge && avgTitleLen <= 18 && visibleLinks.length >= 2
+
+  if (layout === 'grid' || autoUseMobileGrid) {
+    const gridCols = layout === 'grid' ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-1'
+    return (
+      <div className={`${spacing.sectionGap} grid ${gridCols} gap-2.5 sm:gap-3`}>
+        {visibleLinks.map((item) => renderLink(item, 'grid'))}
+      </div>
+    )
   }
+
   if (layout === 'card') {
     return <div className={`${spacing.sectionGap} ${spacing.linkGap}`}>{visibleLinks.map((item) => renderLink(item, 'card'))}</div>
   }
@@ -298,8 +316,8 @@ export function ProjectsSection({ profile, projects, skin, layout, onTrack, t }:
             {item.imageURL && <CardImg src={item.imageURL} alt={item.title} className="aspect-[16/9] w-full" />}
             <div className="p-4">
               <span className={`text-[10px] font-medium uppercase tracking-widest ${index === 0 ? 'text-white/75' : skin.sub}`}>{t('selectedWork')}</span>
-              <p className="mt-2 text-base font-medium leading-snug">{item.title}</p>
-              {item.description && <p className={`mt-1.5 line-clamp-2 text-xs leading-relaxed ${index === 0 ? 'text-white/75' : skin.sub}`}>{item.description}</p>}
+              <p className="mt-1.5 text-base font-medium leading-snug">{item.title}</p>
+              {item.description && <p className={`mt-1 line-clamp-3 text-xs leading-relaxed ${index === 0 ? 'text-white/75' : skin.sub}`}>{item.description}</p>}
             </div>
           </a>
         ))}
@@ -307,7 +325,20 @@ export function ProjectsSection({ profile, projects, skin, layout, onTrack, t }:
     )
   }
 
-  const cols = layout === 'grid' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
+  // Mobile layout auto-optimization for projects:
+  // - Thresholds:
+  //   1) no thumbnail images (hasImages = false)
+  //   2) average combined text length (title + description) <= 45 characters
+  //   3) at least 2 projects
+  // Intent: Short text-only project cards fit comfortably in 2 columns on mobile, saving vertical space.
+  const hasImages = visibleProjects.some((p) => p.imageURL)
+  const avgTextLen = visibleProjects.reduce((acc, p) => acc + (p.title?.length || 0) + (p.description?.length || 0), 0) / visibleProjects.length
+  const autoMobile2Col = !hasImages && avgTextLen <= 45 && visibleProjects.length >= 2
+
+  const cols = layout === 'grid'
+    ? (autoMobile2Col ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-3')
+    : (autoMobile2Col ? 'grid-cols-2 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2')
+
   return (
     <div className={`${spacing.sectionGap} grid gap-3 ${cols}`}>
       {visibleProjects.map((item, index) => (
@@ -317,17 +348,19 @@ export function ProjectsSection({ profile, projects, skin, layout, onTrack, t }:
           target="_blank"
           rel="noreferrer"
           onClick={() => onTrack?.('projects', item.id)}
-          className={`flex min-h-32 flex-col rounded-xl p-4 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 ${index === 0 ? '' : skin.strip}`}
+          className={`flex flex-col justify-between rounded-xl p-3.5 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 h-full ${index === 0 ? '' : skin.strip}`}
           style={index === 0 ? { backgroundColor: profile.accentColor, color: '#ffffff' } : undefined}
         >
-          {item.imageURL && (
-            <div className="mb-3">
-              <CardImg src={item.imageURL} alt={item.title} className="aspect-[16/10] w-full rounded-lg" />
-            </div>
-          )}
-          <span className={`text-[10px] font-medium uppercase tracking-widest ${index === 0 ? 'text-white/75' : skin.sub}`}>{t('selectedWork')}</span>
-          <p className={`${item.imageURL ? 'mt-3' : 'mt-8'} text-sm font-medium leading-snug`}>{item.title}</p>
-          {item.description && <p className={`mt-1.5 line-clamp-2 text-xs leading-relaxed ${index === 0 ? 'text-white/75' : skin.sub}`}>{item.description}</p>}
+          <div>
+            {item.imageURL && (
+              <div className="mb-2.5">
+                <CardImg src={item.imageURL} alt={item.title} className="aspect-[16/10] w-full rounded-lg" />
+              </div>
+            )}
+            <span className={`text-[10px] font-medium uppercase tracking-widest ${index === 0 ? 'text-white/75' : skin.sub}`}>{t('selectedWork')}</span>
+            <p className="mt-1 text-sm font-medium leading-snug">{item.title}</p>
+            {item.description && <p className={`mt-1 line-clamp-3 text-xs leading-relaxed ${index === 0 ? 'text-white/75' : skin.sub}`}>{item.description}</p>}
+          </div>
         </a>
       ))}
     </div>

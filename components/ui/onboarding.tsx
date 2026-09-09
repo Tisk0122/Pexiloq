@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { ArrowUpRight, Check, Loader2, Plus, Trash2 } from 'lucide-react'
 import { useI18n } from '@/components/i18n-provider'
+import { checkUsernameAvailable } from '@/lib/firebase'
 import { siteHost } from '@/lib/site'
 import { AppearanceControls } from '../editor/appearance-controls'
 import { LivePreview } from '../preview/live-preview'
@@ -29,6 +30,30 @@ export function Onboarding() {
   )
   const [busy, setBusy] = useState(false)
   const [finishError, setFinishError] = useState('')
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle')
+
+  React.useEffect(() => {
+    const candidate = draft.username?.trim().toLowerCase()
+    if (!candidate || candidate.length < 2) {
+      setUsernameStatus('invalid')
+      return
+    }
+    if (candidate === profile.username) {
+      setUsernameStatus('idle')
+      return
+    }
+    setUsernameStatus('checking')
+    const timer = window.setTimeout(async () => {
+      try {
+        const res = await checkUsernameAvailable(candidate, uid || undefined)
+        if (res.available) setUsernameStatus('available')
+        else setUsernameStatus('taken')
+      } catch {
+        setUsernameStatus('available')
+      }
+    }, 500)
+    return () => window.clearTimeout(timer)
+  }, [draft.username, profile.username, uid])
 
   const steps = [
     { label: t('stepBasics'), hint: t('stepBasicsHint') },
@@ -43,6 +68,10 @@ export function Onboarding() {
   const isLast = step === steps.length - 1
 
   async function finish() {
+    if (usernameStatus === 'taken' || usernameStatus === 'invalid') {
+      setFinishError(t('usernameTaken'))
+      return
+    }
     setBusy(true)
     setFinishError('')
     try {
@@ -51,7 +80,11 @@ export function Onboarding() {
       await persistProjects(draftProjects)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
-      setFinishError(msg.replace('Firebase: ', '') || t('somethingWrong'))
+      if (msg.includes('USERNAME_TAKEN')) {
+        setFinishError(t('usernameTaken'))
+      } else {
+        setFinishError(msg.replace('Firebase: ', '') || t('somethingWrong'))
+      }
     } finally {
       setBusy(false)
     }
@@ -84,12 +117,38 @@ export function Onboarding() {
           {step === 0 && (
             <div className="mt-6 space-y-4">
               <Field label={t('displayName')} value={draft.displayName} onChange={(v) => setField({ displayName: v })} />
-              <Field
-                label={t('username')}
-                value={draft.username}
-                prefix={`${siteHost}/`}
-                onChange={(v) => setField({ username: v.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
-              />
+              <div className="space-y-1.5">
+                <Field
+                  label={t('username')}
+                  value={draft.username}
+                  prefix={`${siteHost}/`}
+                  onChange={(v) => setField({ username: v.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                />
+                {usernameStatus === 'checking' && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <Loader2 className="size-3 animate-spin" />
+                    {t('usernameChecking')}
+                  </p>
+                )}
+                {usernameStatus === 'available' && draft.username !== profile.username && (
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5">
+                    <Check className="size-3" />
+                    {t('usernameAvailable')}
+                  </p>
+                )}
+                {usernameStatus === 'taken' && (
+                  <p role="alert" className="text-xs text-destructive font-medium flex items-center gap-1.5">
+                    <span>✕</span>
+                    {t('usernameTaken')}
+                  </p>
+                )}
+                {usernameStatus === 'invalid' && draft.username.length > 0 && draft.username !== profile.username && (
+                  <p role="alert" className="text-xs text-destructive font-medium flex items-center gap-1.5">
+                    <span>✕</span>
+                    {t('usernameInvalid')}
+                  </p>
+                )}
+              </div>
               <Field label={t('headline')} value={draft.headline} onChange={(v) => setField({ headline: v })} />
             </div>
           )}
@@ -260,7 +319,8 @@ export function Onboarding() {
             ) : (
               <button
                 onClick={() => setStep((s) => Math.min(s + 1, steps.length - 1))}
-                className="flex min-h-[44px] items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground"
+                disabled={step === 0 && (usernameStatus === 'taken' || usernameStatus === 'invalid' || usernameStatus === 'checking')}
+                className="flex min-h-[44px] items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground disabled:opacity-50"
               >
                 {t('stepNext')}
                 <ArrowUpRight className="size-4" />

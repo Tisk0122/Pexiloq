@@ -26,9 +26,100 @@ export async function uploadImage(file: File, path: string) {
   return getDownloadURL(snapshot.ref)
 }
 
+export async function checkUsernameAvailable(rawUsername: string, currentUid?: string): Promise<{ available: boolean; ownedBySelf: boolean }> {
+  if (!firebaseEnabled || !db) return { available: true, ownedBySelf: true }
+  const username = rawUsername.toLowerCase().trim()
+  if (!username) return { available: false, ownedBySelf: false }
+
+  try {
+    const { doc, getDoc } = await import('firebase/firestore')
+    const snap = await getDoc(doc(db, 'usernames', username))
+    if (!snap.exists()) {
+      return { available: true, ownedBySelf: false }
+    }
+    const data = snap.data()
+    if (currentUid && data.uid === currentUid) {
+      return { available: true, ownedBySelf: true }
+    }
+    return { available: false, ownedBySelf: false }
+  } catch {
+    return { available: true, ownedBySelf: false }
+  }
+}
+
+export async function claimUsername(uid: string, newUsernameRaw: string, oldUsernameRaw?: string) {
+  if (!firebaseEnabled || !db) return
+  const newUsername = newUsernameRaw.toLowerCase().trim()
+  const oldUsername = oldUsernameRaw ? oldUsernameRaw.toLowerCase().trim() : undefined
+  if (!newUsername) throw new Error('USERNAME_INVALID')
+
+  const { doc, runTransaction, serverTimestamp } = await import('firebase/firestore')
+
+  await runTransaction(db, async (transaction) => {
+    const newDocRef = doc(db, 'usernames', newUsername)
+    const userDocRef = doc(db, 'users', uid)
+    const oldDocRef = oldUsername && oldUsername !== newUsername ? doc(db, 'usernames', oldUsername) : null
+
+    const newSnap = await transaction.get(newDocRef)
+    const userSnap = await transaction.get(userDocRef)
+    const oldSnap = oldDocRef ? await transaction.get(oldDocRef) : null
+
+    if (newSnap.exists()) {
+      const data = newSnap.data()
+      if (data.uid !== uid) {
+        throw new Error('USERNAME_TAKEN')
+      }
+    }
+
+    const createdAt = newSnap.exists() && newSnap.data()?.createdAt ? newSnap.data().createdAt : serverTimestamp()
+    transaction.set(newDocRef, { uid, createdAt, updatedAt: serverTimestamp() }, { merge: true })
+    transaction.set(userDocRef, { username: newUsername, uid, updatedAt: serverTimestamp() }, { merge: true })
+
+    if (oldDocRef && oldSnap && oldSnap.exists()) {
+      if (oldSnap.data()?.uid === uid) {
+        transaction.delete(oldDocRef)
+      }
+    }
+  })
+}
+
+export async function claimUniqueUsername(uid: string, baseRaw: string): Promise<string> {
+  const base = baseRaw.toLowerCase().replace(/[^a-z0-9-]/g, '') || 'creator'
+  let candidate = base
+  for (let attempt = 0; attempt < 10; attempt++) {
+    try {
+      await claimUsername(uid, candidate)
+      return candidate
+    } catch (err: any) {
+      if (err?.message === 'USERNAME_TAKEN') {
+        candidate = `${base}${Math.floor(1000 + Math.random() * 9000)}`
+      } else {
+        throw err
+      }
+    }
+  }
+  candidate = `${base}${crypto.randomUUID().slice(0, 6)}`
+  await claimUsername(uid, candidate)
+  return candidate
+}
+
 export async function saveProfile(uid: string, profile: Record<string, unknown>) {
   const { db: firestore } = requireFirebase()
   const { doc, setDoc, serverTimestamp } = await import('firebase/firestore')
+
+  if (typeof profile.username === 'string' && profile.username) {
+    const newUsername = profile.username.toLowerCase().trim()
+    const userSnap = await loadProfile(uid)
+    const oldUsername = userSnap?.username ? String(userSnap.username).toLowerCase().trim() : undefined
+    if (newUsername !== oldUsername) {
+      await claimUsername(uid, newUsername, oldUsername)
+    } else {
+      try {
+        await claimUsername(uid, newUsername)
+      } catch { /* best effort */ }
+    }
+  }
+
   await setDoc(doc(firestore, 'users', uid), { ...profile, uid, updatedAt: serverTimestamp() }, { merge: true })
 }
 
@@ -77,6 +168,16 @@ async function legacyLoadCollection(uid: string, kind: 'links' | 'projects') {
 export async function loadUserBundle(uid: string) {
   const data = await loadProfile(uid)
   if (!data) return null
+
+  if (data.username) {
+    try {
+      const avail = await checkUsernameAvailable(data.username, uid)
+      if (avail.available && !avail.ownedBySelf) {
+        await claimUsername(uid, data.username)
+      }
+    } catch { /* best effort */ }
+  }
+
   let links = (data as any).links
   let projects = (data as any).projects
   let needsMigration = false
@@ -144,6 +245,6 @@ export async function deleteAccount(uid: string) {
 
 export const firebaseSetup = `NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key\nNEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=pexiloq.firebaseapp.com\nNEXT_PUBLIC_FIREBASE_PROJECT_ID=pexiloq\nNEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=pexiloq.firebasestorage.app\nNEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=44563563707\nNEXT_PUBLIC_FIREBASE_APP_ID=1:44563563707:web:4294e5bd7bae2eda33d59e`
 
-export const rules = `rules_version = '2';\nservice cloud.firestore { match /databases/{database}/documents { match /users/{userId} { allow read: if true; allow write: if request.auth != null && request.auth.uid == userId; match /{sub=**} { allow read: if true; allow write: if request.auth != null && request.auth.uid == userId; } } match /analytics/{userId} { allow read: if request.auth != null && request.auth.uid == userId; allow create: if true; allow update: if request.resource.data.keys().hasOnly(['views', 'links', 'projects', 'socials']); allow delete: if false; match /{sub=**} { allow read: if request.auth != null && request.auth.uid == userId; allow create: if true; allow update: if request.resource.data.keys().hasOnly(['views', 'links', 'projects', 'socials']); allow delete: if false; } } } }`
+export const rules = `rules_version = '2';\nservice cloud.firestore { match /databases/{database}/documents { match /usernames/{username} { allow read: if true; allow create: if request.auth != null && request.resource.data.uid == request.auth.uid; allow update: if request.auth != null && resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid; allow delete: if request.auth != null && resource.data.uid == request.auth.uid; } match /users/{userId} { allow read: if true; allow write: if request.auth != null && request.auth.uid == userId && (!request.resource.data.keys().hasAny(['username']) || (resource != null && request.resource.data.username == resource.data.username) || get(/databases/$(database)/documents/usernames/$(request.resource.data.username)).data.uid == request.auth.uid); match /{sub=**} { allow read: if true; allow write: if request.auth != null && request.auth.uid == userId; } } match /analytics/{userId} { allow read: if request.auth != null && request.auth.uid == userId; allow create: if true; allow update: if request.resource.data.keys().hasOnly(['views', 'links', 'projects', 'socials']); allow delete: if false; match /{sub=**} { allow read: if request.auth != null && request.auth.uid == userId; allow create: if true; allow update: if request.resource.data.keys().hasOnly(['views', 'links', 'projects', 'socials']); allow delete: if false; } } } }`
 
 export const storageRules = `rules_version = '2';\nservice firebase.storage { match /b/{bucket}/o { match /users/{userId}/{allPaths=**} { allow read: if true; allow write: if request.auth != null && request.auth.uid == userId; } } }`
