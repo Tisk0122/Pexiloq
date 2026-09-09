@@ -130,7 +130,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full rounded-xl border bg-card px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-foreground/50 shadow-xs"
+                  className="w-full rounded-xl border bg-card px-4 py-3 text-base sm:text-sm font-normal text-foreground outline-none transition focus:border-foreground/50 shadow-xs"
                   placeholder={c.namePlaceholder}
                 />
               </label>
@@ -142,7 +142,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-xl border bg-card px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-foreground/50 shadow-xs"
+                className="w-full rounded-xl border bg-card px-4 py-3 text-base sm:text-sm font-normal text-foreground outline-none transition focus:border-foreground/50 shadow-xs"
                 placeholder={c.emailPlaceholder}
               />
             </label>
@@ -154,7 +154,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl border bg-card px-4 py-3 text-sm font-normal text-foreground outline-none transition focus:border-foreground/50 shadow-xs"
+                className="w-full rounded-xl border bg-card px-4 py-3 text-base sm:text-sm font-normal text-foreground outline-none transition focus:border-foreground/50 shadow-xs"
                 placeholder={c.passwordPlaceholder}
               />
             </label>
