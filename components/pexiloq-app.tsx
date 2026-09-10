@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ArrowUpRight, Check, CircleAlert, Copy, ExternalLink, Eye, GripVertical, Layers, Link2, Loader2, LogOut, Menu, Monitor, Palette, Plus, Save, Settings, Smartphone, Trash2, Type, Upload, UserRound, X, ZoomIn, Zap } from 'lucide-react'
-import { auth, deleteAccount, firebaseEnabled, loadAnalytics, loadPublicBundle, loadUserBundle, recordAnalytics, saveItems, saveProfile } from '@/lib/firebase'
+import { auth, deleteAccount, firebaseEnabled, isUsernameAvailable, loadAnalytics, loadPublicBundle, loadUserBundle, recordAnalytics, saveItems, saveProfile } from '@/lib/firebase'
 import { LanguageSwitcher, useI18n } from '@/components/i18n-provider'
 import { siteHost } from '@/lib/site'
 import { deleteUser, EmailAuthProvider, GoogleAuthProvider, onAuthStateChanged, reauthenticateWithCredential, reauthenticateWithPopup, signOut } from 'firebase/auth'
@@ -635,7 +635,7 @@ function CardImg({ src, alt, className, fit = 'auto', style }: { src: string; al
   )
 }
 
-type Skin = { card: string; sub: string; bar: string; strip: string }
+type Skin = { card: string; sub: string; bar: string; strip: string; strongText: string }
 type CardTrack = (type: 'links' | 'projects' | 'socials', key: string) => void
 
 function LinksSection({ profile, links, skin, layout, onTrack }: { profile: Profile; links: LinkItem[]; skin: Skin; layout: LayoutTemplate; onTrack?: CardTrack }) {
@@ -655,11 +655,22 @@ function LinksSection({ profile, links, skin, layout, onTrack }: { profile: Prof
           : { color: profile.accentColor, backgroundColor: 'transparent' },
   })
   const baseLinkClass = profile.buttonStyle === 'solid'
-    ? `flex min-h-12 items-center justify-between rounded-xl border border-transparent text-left text-sm font-medium transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:shadow-none`
+    ? `flex min-h-12 items-center justify-between rounded-xl border border-transparent text-left text-sm font-medium transition duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:-translate-y-0.5 active:translate-y-0 active:shadow-none outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-current`
     : profile.buttonStyle === 'outline'
-      ? `flex min-h-12 items-center justify-between rounded-xl border-2 text-left text-sm font-medium transition duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 active:shadow-none`
-      : `flex min-h-12 items-center justify-between rounded-xl border border-transparent text-left text-sm font-medium transition duration-200 hover:-translate-y-0.5 active:translate-y-0 ${ghostHover}`
+      ? `flex min-h-12 items-center justify-between rounded-xl border-2 text-left text-sm font-medium transition duration-200 hover:-translate-y-0.5 hover:shadow-sm focus-visible:-translate-y-0.5 active:translate-y-0 active:shadow-none outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-current`
+      : `flex min-h-12 items-center justify-between rounded-xl border border-transparent text-left text-sm font-medium transition duration-200 hover:-translate-y-0.5 focus-visible:-translate-y-0.5 active:translate-y-0 outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-current ${ghostHover}`
   const icon = (item: LinkItem, sizeClass = 'size-4') => profile.showLinkIcons !== false && (item.icon ? <span className="shrink-0 text-base leading-none" style={item.iconColor ? { color: item.iconColor } : undefined}>{item.icon}</span> : <img src={faviconFor(item.url)} alt="" aria-hidden="true" className={`${sizeClass} shrink-0 rounded-sm opacity-90`} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />)
+  const iconChip = (item: LinkItem, tone?: string) => {
+    const rendered = icon(item)
+    if (!rendered) return null
+    return (
+      <span
+        className={`grid size-8 shrink-0 place-items-center rounded-full ${tone || (dark ? 'bg-white/10' : 'bg-secondary/70')}`}
+      >
+        {rendered}
+      </span>
+    )
+  }
 
   // A link's own displayStyle (if set) overrides the layout template's default look for that one link.
   function renderLink(item: LinkItem, fallback: LayoutTemplate | 'default') {
@@ -708,12 +719,12 @@ function LinksSection({ profile, links, skin, layout, onTrack }: { profile: Prof
     }
     if (fallback === 'card') {
       return (
-        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} {...linkStyle(item, `${baseLinkClass} ${spacing.linkPad} shadow-[0_10px_30px_rgba(35,35,30,0.08)]`)}>
+        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} {...linkStyle(item, `group ${baseLinkClass} ${spacing.linkPad} shadow-[0_10px_30px_rgba(35,35,30,0.08)]`)}>
           <span className="flex min-w-0 items-center gap-3">
-            {icon(item)}
+            {iconChip(item)}
             <span className="truncate">{item.title}</span>
           </span>
-          <ExternalLink className="size-4 shrink-0 opacity-70" />
+          <ExternalLink className="size-4 shrink-0 opacity-70 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
         </a>
       )
     }
@@ -732,12 +743,12 @@ function LinksSection({ profile, links, skin, layout, onTrack }: { profile: Prof
       )
     }
     return (
-      <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} {...linkStyle(item, `${baseLinkClass} ${spacing.linkPad}`)}>
+      <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} {...linkStyle(item, `group ${baseLinkClass} ${spacing.linkPad}`)}>
         <span className="flex min-w-0 items-center gap-3">
-          {icon(item)}
+          {iconChip(item)}
           <span className="truncate">{item.title}</span>
         </span>
-        <ExternalLink className="size-4 shrink-0 opacity-60" />
+        <ExternalLink className="size-4 shrink-0 opacity-60 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
       </a>
     )
   }
@@ -758,16 +769,23 @@ function ProjectsSection({ profile, projects, skin, layout, onTrack, t }: { prof
   const visibleProjects = projects.filter((item) => item.visible)
   if (!visibleProjects.length) return null
   const spacing = spacingConfig[profile.spacing || 'cozy']
+  // The lead project gets a solid accent-colored card to stand out from the rest, but "solid
+  // accent + fixed white text" breaks the moment someone picks a light accent color (pink,
+  // mint, pale yellow) — the caption and title both wash out to near-illegible. Deriving both
+  // from the accent's actual luminance keeps the lead card legible for any color the person
+  // picks, the same way link buttons with a custom bgColor already do (see contrastColor above).
+  const leadText = contrastColor(profile.accentColor)
+  const leadSubText = leadText === '#ffffff' ? 'rgba(255,255,255,0.78)' : 'rgba(21,21,21,0.62)'
   if (layout === 'magazine') {
     return (
       <div className={`${spacing.sectionGap} space-y-4`}>
         {visibleProjects.map((item, index) => (
-          <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('projects', item.id)} className={`block overflow-hidden rounded-2xl text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 ${index === 0 ? '' : `border ${skin.bar}`}`} style={index === 0 ? { backgroundColor: profile.accentColor, color: '#ffffff' } : undefined}>
+          <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('projects', item.id)} className={`block overflow-hidden rounded-2xl text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 ${index === 0 ? '' : `border ${skin.bar}`}`} style={index === 0 ? { backgroundColor: profile.accentColor, color: leadText } : undefined}>
             {item.imageURL && <CardImg src={item.imageURL} alt={item.title} className="aspect-[16/9] w-full" />}
             <div className="p-4">
-              <span className={`text-[10px] font-medium uppercase tracking-widest ${index === 0 ? 'text-white/75' : skin.sub}`}>{t('selectedWork')}</span>
-              <p className="mt-2 text-base font-medium leading-snug">{item.title}</p>
-              {item.description && <p className={`mt-1.5 line-clamp-2 text-xs leading-relaxed ${index === 0 ? 'text-white/75' : skin.sub}`}>{item.description}</p>}
+              <span className={`text-[10px] font-medium uppercase tracking-widest ${index === 0 ? '' : skin.sub}`} style={index === 0 ? { color: leadSubText } : undefined}>{t('selectedWork')}</span>
+              <p className={`mt-2 text-base font-medium leading-snug ${index === 0 ? '' : skin.strongText}`}>{item.title}</p>
+              {item.description && <p className={`mt-1.5 line-clamp-2 text-xs leading-relaxed ${index === 0 ? '' : skin.sub}`} style={index === 0 ? { color: leadSubText } : undefined}>{item.description}</p>}
             </div>
           </a>
         ))}
@@ -775,14 +793,19 @@ function ProjectsSection({ profile, projects, skin, layout, onTrack, t }: { prof
     )
   }
   const cols = layout === 'grid' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
+  // skin.strip carries a muted foreground (it's meant for the small-caps caption), so it can't
+  // be applied to the whole card — the title would inherit that same washed-out gray with
+  // nothing to darken it back. Split it: the card wrapper keeps skin.strip for its background
+  // and default (caption/description) tone, and the title gets skin.card's stronger text color
+  // explicitly so it stays legible regardless of theme.
   return (
     <div className={`${spacing.sectionGap} grid gap-3 ${cols}`}>
       {visibleProjects.map((item, index) => (
-        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('projects', item.id)} className={`flex min-h-32 flex-col rounded-xl p-4 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 ${index === 0 ? '' : skin.strip}`} style={index === 0 ? { backgroundColor: profile.accentColor, color: '#ffffff' } : undefined}>
+        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('projects', item.id)} className={`flex min-h-32 flex-col rounded-xl p-4 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 ${index === 0 ? '' : skin.strip}`} style={index === 0 ? { backgroundColor: profile.accentColor, color: leadText } : undefined}>
           {item.imageURL && <div className="mb-3"><CardImg src={item.imageURL} alt={item.title} className="aspect-[16/10] w-full rounded-lg" /></div>}
-          <span className={`text-[10px] font-medium uppercase tracking-widest ${index === 0 ? 'text-white/75' : skin.sub}`}>{t('selectedWork')}</span>
-          <p className={`${item.imageURL ? 'mt-3' : 'mt-8'} text-sm font-medium leading-snug`}>{item.title}</p>
-          {item.description && <p className={`mt-1.5 line-clamp-2 text-xs leading-relaxed ${index === 0 ? 'text-white/75' : skin.sub}`}>{item.description}</p>}
+          <span className={`text-[10px] font-medium uppercase tracking-widest ${index === 0 ? '' : skin.sub}`} style={index === 0 ? { color: leadSubText } : undefined}>{t('selectedWork')}</span>
+          <p className={`${item.imageURL ? 'mt-3' : 'mt-8'} text-sm font-medium leading-snug ${index === 0 ? '' : skin.strongText}`}>{item.title}</p>
+          {item.description && <p className={`mt-1.5 line-clamp-2 text-xs leading-relaxed ${index === 0 ? '' : skin.sub}`} style={index === 0 ? { color: leadSubText } : undefined}>{item.description}</p>}
         </a>
       ))}
     </div>
@@ -795,8 +818,8 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
   const [showQr, setShowQr] = useState(false)
   const dark = profile.theme === 'dark'
   const skin: Skin = dark
-    ? { card: 'border-[#3a3d38] bg-[#262926] text-[#f5f5f2]', sub: 'text-[#adb1a9]', bar: 'border-[#3a3d38]', strip: 'bg-[#30332f] text-[#adb1a9]' }
-    : { card: 'border-border bg-card text-foreground', sub: 'text-muted-foreground', bar: 'border-[#e3e3dd]', strip: 'bg-secondary text-muted-foreground' }
+    ? { card: 'border-[#3a3d38] bg-[#262926] text-[#f5f5f2]', sub: 'text-[#adb1a9]', bar: 'border-[#3a3d38]', strip: 'bg-[#30332f] text-[#adb1a9]', strongText: 'text-[#f5f5f2]' }
+    : { card: 'border-border bg-card text-foreground', sub: 'text-muted-foreground', bar: 'border-[#e3e3dd]', strip: 'bg-secondary text-muted-foreground', strongText: 'text-foreground' }
   const radius = radiusClass[profile.cardRadius]
   const font = fontClass[profile.fontStyle]
   async function share() {
@@ -828,14 +851,16 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
         </div>
       )}
       <div className="p-5">
-      <div className={`flex items-center justify-between gap-2 text-[11px] ${skin.sub}`}>
-        <span className="min-w-0 truncate font-medium tracking-tight opacity-80">{siteHost}/{profile.username}</span>
-        <span className="flex shrink-0 items-center gap-0.5">
-          <button onClick={() => setShowQr((v) => !v)} aria-label={t('showQr')} aria-pressed={showQr} className={`-m-1.5 rounded-full p-2 transition ${showQr ? (dark ? 'bg-white/15' : 'bg-secondary/80') : dark ? 'hover:bg-white/10' : 'hover:bg-secondary/60'}`}>
+      <div className="flex items-center justify-between gap-2">
+        <span className={`inline-flex min-w-0 items-center gap-1.5 truncate rounded-full border px-3 py-1.5 text-[11px] font-medium tracking-tight ${dark ? 'border-white/15 bg-white/5' : 'border-[#e3e3dd] bg-secondary/50'} ${skin.sub}`}>
+          <span className="min-w-0 truncate">{siteHost}/{profile.username}</span>
+        </span>
+        <span className={`flex shrink-0 items-center gap-0.5 rounded-full border p-0.5 ${dark ? 'border-white/15' : 'border-[#e3e3dd]'}`}>
+          <button onClick={() => setShowQr((v) => !v)} aria-label={t('showQr')} aria-pressed={showQr} className={`rounded-full p-2 transition ${showQr ? (dark ? 'bg-white/15' : 'bg-secondary/80') : dark ? 'hover:bg-white/10' : 'hover:bg-secondary/60'}`}>
             <svg viewBox="0 0 24 24" aria-hidden="true" className="size-3.5"><rect x="3" y="3" width="7" height="7" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" /><rect x="14" y="3" width="7" height="7" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" /><rect x="3" y="14" width="7" height="7" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" /><rect x="14.5" y="14.5" width="2.5" height="2.5" fill="currentColor" /><rect x="18.5" y="14.5" width="2.5" height="2.5" fill="currentColor" /><rect x="14.5" y="18.5" width="2.5" height="2.5" fill="currentColor" /><rect x="18.5" y="18.5" width="2.5" height="2.5" fill="currentColor" /></svg>
           </button>
           <span className="relative">
-            <button onClick={share} aria-label={t('shareButton')} className={`-m-1.5 rounded-full p-2 transition ${dark ? 'hover:bg-white/10' : 'hover:bg-secondary/60'}`}>
+            <button onClick={share} aria-label={t('shareButton')} className={`rounded-full p-2 transition ${dark ? 'hover:bg-white/10' : 'hover:bg-secondary/60'}`}>
               {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
             </button>
             {copied && (
@@ -847,8 +872,8 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
         </span>
       </div>
       {showQr && !preview && (
-        <div className={`mt-4 flex flex-col items-center gap-3 border-t pt-5 text-center ${skin.bar}`}>
-          <img src={qrCodeFor(`https://${typeof window !== 'undefined' ? window.location.host : siteHost}/${profile.username}`)} alt={t('qr')} width={148} height={148} className="rounded-xl border" />
+        <div className={`mt-4 flex flex-col items-center gap-3 rounded-2xl border pt-5 pb-5 text-center ${dark ? 'border-white/15 bg-white/5' : 'border-[#e3e3dd] bg-secondary/30'}`}>
+          <img src={qrCodeFor(`https://${typeof window !== 'undefined' ? window.location.host : siteHost}/${profile.username}`)} alt={t('qr')} width={148} height={148} className="rounded-xl border bg-white p-2" />
           <a href={qrCodeFor(`https://${typeof window !== 'undefined' ? window.location.host : siteHost}/${profile.username}`, 512)} download={`${profile.username}-pexiloq-qr.png`} target="_blank" rel="noreferrer" className="text-xs underline underline-offset-4" style={{ color: profile.accentColor }}>{t('downloadQr')}</a>
         </div>
       )}
@@ -856,20 +881,20 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
         <div className={isNameCard ? 'sm:w-64 sm:shrink-0 sm:text-left text-center' : ''}>
           {profile.showAvatar && (
             <div
-              className={`${isNameCard ? 'mx-auto sm:mx-0' : 'mx-auto'} ${profile.coverImageURL ? '-mt-3' : ''} relative grid size-22 place-items-center overflow-hidden text-xl font-medium ${dark ? 'bg-white/10 text-[#f5f5f2]' : 'bg-secondary text-[#151515]'} ${avatarShapeClass[profile.avatarShape]} ${profile.avatarAnimation === 'pulse' ? 'pexiloq-avatar-pulse' : ''} ${profile.avatarAnimation === 'spin' ? 'pexiloq-avatar-spin' : ''} ${profile.avatarAnimation === 'glow' ? 'pexiloq-avatar-glow' : ''}`}
+              className={`${isNameCard ? 'mx-auto sm:mx-0' : 'mx-auto'} ${profile.coverImageURL ? '-mt-3' : ''} relative grid size-24 place-items-center overflow-hidden text-xl font-medium ${dark ? 'bg-white/10 text-[#f5f5f2]' : 'bg-secondary text-[#151515]'} ${avatarShapeClass[profile.avatarShape]} ${profile.avatarAnimation === 'pulse' ? 'pexiloq-avatar-pulse' : ''} ${profile.avatarAnimation === 'spin' ? 'pexiloq-avatar-spin' : ''} ${profile.avatarAnimation === 'glow' ? 'pexiloq-avatar-glow' : ''}`}
               style={{
                 // The ring always derives from the profile's own accent color, never a fixed
                 // hue, so it can't clash with a brand-colored avatar. A themed background
                 // ring plus a soft shadow lifts the avatar off a cover photo edge cleanly.
                 ...(profile.avatarRing ? { outline: `3px solid ${profile.accentColor}`, outlineOffset: 2 } : undefined),
-                boxShadow: profile.coverImageURL ? `0 4px 16px rgba(0,0,0,0.18)` : undefined,
+                boxShadow: profile.coverImageURL ? `0 4px 16px rgba(0,0,0,0.18)` : `0 10px 24px -8px rgba(21,21,21,0.18)`,
                 ...(profile.avatarAnimation === 'spin' || profile.avatarAnimation === 'glow' ? ({ '--pexiloq-avatar-ring-color': profile.accentColor } as React.CSSProperties) : undefined),
               }}
             >
               {profile.photoURL ? <CardImg src={profile.photoURL} alt={profile.displayName} className={`size-full ${avatarShapeClass[profile.avatarShape]}`} /> : profile.displayName.slice(0, 2).toUpperCase()}
             </div>
           )}
-          <h1 className={`${profile.showAvatar ? 'mt-5' : ''} flex items-center gap-1.5 text-[1.85rem] font-medium leading-[1.15] tracking-[-0.04em] ${font} ${isNameCard ? '' : 'justify-center'}`}>
+          <h1 className={`${profile.showAvatar ? 'mt-5' : ''} flex items-center gap-1.5 text-[1.85rem] font-medium leading-[1.15] tracking-[-0.045em] ${font} ${isNameCard ? '' : 'justify-center'}`}>
             <span className="min-w-0 truncate">{profile.displayName}</span>
             {profile.showVerifiedBadge && (
               <span aria-label={t('verifiedBadge')} title={t('verifiedBadge')} className="inline-grid size-5 shrink-0 place-items-center rounded-full text-white" style={{ backgroundColor: profile.accentColor }}>
@@ -889,7 +914,7 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
               {socialPlatforms.filter((p) => profile.socials?.[p]).map((p) => {
                 const value = profile.socials![p]!
                 const href = socialHref(p, value, profile.twitterIcon)
-                return <a key={p} href={href} target="_blank" rel="noreferrer" aria-label={socialMeta[p].label} onClick={() => onTrack?.('socials', p)} className={`grid size-9 place-items-center rounded-full transition duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 ${socialFilled ? '' : `border ${skin.bar}`}`} style={socialFilled ? { backgroundColor: profile.accentColor, color: '#ffffff' } : undefined}><SocialGlyph platform={p} twitterIcon={profile.twitterIcon} className="size-4" /></a>
+                return <a key={p} href={href} target="_blank" rel="noreferrer" aria-label={socialMeta[p].label} onClick={() => onTrack?.('socials', p)} className={`grid size-9 place-items-center rounded-full transition duration-200 hover:-translate-y-0.5 hover:shadow-sm focus-visible:-translate-y-0.5 active:translate-y-0 ${socialFilled ? '' : `border ${skin.bar}`}`} style={socialFilled ? { backgroundColor: profile.accentColor, color: '#ffffff' } : undefined}><SocialGlyph platform={p} twitterIcon={profile.twitterIcon} className="size-4" /></a>
               })}
             </div>
           )}
@@ -898,7 +923,18 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
           {sectionOrder.map((key) => <div key={key}>{sections[key]}</div>)}
         </div>
       </div>
-      {profile.showBadge && <div className={`mt-2 border-t pt-4 text-center text-[10px] opacity-70 ${skin.bar} ${skin.sub}`}>{t('made')} <span className={`font-semibold ${dark ? 'text-[#f5f5f2]' : 'text-[#151515]'}`}>pexiloq</span></div>}
+      {profile.showBadge && (
+        <div className={`mt-2 flex justify-center border-t pt-4 ${skin.bar}`}>
+          <a
+            href="https://pexiloq.com"
+            target="_blank"
+            rel="noreferrer"
+            className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-[10px] transition hover:-translate-y-0.5 ${dark ? 'bg-white/10 hover:bg-white/15' : 'bg-secondary/70 hover:bg-secondary'} ${skin.sub}`}
+          >
+            {t('made')} <span className={`font-semibold ${dark ? 'text-[#f5f5f2]' : 'text-[#151515]'}`}>pexiloq</span>
+          </a>
+        </div>
+      )}
       </div>
     </div>
   )
@@ -1077,21 +1113,40 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
   }
   const firstRun = useRef(true)
   const timer = useRef<number | null>(null)
+  // A username mid-check or already known to be taken/too-short must never reach Firestore —
+  // otherwise autosave (which fires on every keystroke) or the unmount flush could silently
+  // write an unavailable handle. usernameStatus tracks the live state of draftProfile.username
+  // for the profile/appearance editor specifically; other editor kinds don't touch it.
+  const usernameStatus = useUsernameStatus(draftProfile.username, profile.username, uid)
+  const usernameBlocksSave = (kind === 'profile' || kind === 'appearance') && (usernameStatus === 'checking' || usernameStatus === 'taken' || usernameStatus === 'short')
   useEffect(() => {
     if (firstRun.current) { firstRun.current = false; return }
     if (timer.current) window.clearTimeout(timer.current)
+    if (usernameBlocksSave) return
     timer.current = window.setTimeout(async () => { timer.current = null; await persistNow(); showSaved() }, 600)
-  }, [draftProfile, draftLinks, draftProjects])
+  }, [draftProfile, draftLinks, draftProjects, usernameBlocksSave])
   const latest = useRef({ profile: draftProfile, links: draftLinks, projects: draftProjects })
   useEffect(() => { latest.current = { profile: draftProfile, links: draftLinks, projects: draftProjects } })
+  const usernameBlocksSaveRef = useRef(usernameBlocksSave)
+  useEffect(() => { usernameBlocksSaveRef.current = usernameBlocksSave })
   useEffect(() => () => {
     if (timer.current) { window.clearTimeout(timer.current); timer.current = null }
     const { profile: p, links: l, projects: pr } = latest.current
-    if (uid && (kind === 'profile' || kind === 'appearance')) void saveProfile(uid, p as any)
+    // If the last-known username check hadn't cleared, fall back to the last saved
+    // username rather than writing the unverified draft value on unmount.
+    const safeProfile = usernameBlocksSaveRef.current ? { ...p, username: profile.username } : p
+    if (uid && (kind === 'profile' || kind === 'appearance')) void saveProfile(uid, safeProfile as any)
     if (uid && kind === 'links') void saveItems(uid, 'links', l)
     if (uid && kind === 'projects') void saveItems(uid, 'projects', pr)
   }, [uid, kind])
-  async function save() { await flushNow(); showSaved() }
+  async function save() {
+    if (usernameBlocksSave) { showUsernameBlockedNotice(); return }
+    await flushNow(); showSaved()
+  }
+  function showUsernameBlockedNotice() {
+    setNotice(usernameStatus === 'taken' ? t('usernameTaken') : usernameStatus === 'short' ? t('usernameTooShort') : t('usernameChecking'))
+    window.setTimeout(() => setNotice(''), 2000)
+  }
   const addLink = () => setDraftLinks([...draftLinks, { id: crypto.randomUUID(), title: '', url: 'https://', visible: true }])
   const addProject = () => setDraftProjects([...draftProjects, { id: crypto.randomUUID(), title: '', description: '', url: 'https://', technologies: [], visible: true }])
   const titles = { profile: t('yourProfile'), links: t('yourLinks'), projects: t('yourProjects'), appearance: t('yourAppearance') }
@@ -1104,7 +1159,7 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
         description={descriptions[kind]}
         action={
           <div className="flex flex-col items-end gap-1.5">
-            <button onClick={save} disabled={saving} className="rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground disabled:opacity-60">{saving ? <><Loader2 className="mr-2 inline size-4 animate-spin" />{t('saving')}</> : <><Save className="mr-2 inline size-4" />{notice || t('save')}</>}</button>
+            <button onClick={save} disabled={saving || usernameBlocksSave} className="rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground disabled:opacity-60">{saving ? <><Loader2 className="mr-2 inline size-4 animate-spin" />{t('saving')}</> : <><Save className="mr-2 inline size-4" />{notice || t('save')}</>}</button>
             {/* Autosave already fires on every change — this caption makes that fact visible so
                people trust it instead of anxiously mashing Save. */}
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -1120,7 +1175,7 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('stepBasics')}</p>
               <div className="mt-4 space-y-4">
                 <Field label={t('displayName')} value={draftProfile.displayName} onChange={(v) => setDraftProfile({ ...draftProfile, displayName: v })} placeholder="e.g. Amira Moss" />
-                <Field label={t('username')} value={draftProfile.username} onChange={(v) => setDraftProfile({ ...draftProfile, username: v.toLowerCase().replace(/[^a-z0-9-]/g, '') })} prefix={`${siteHost}/`} placeholder="username" />
+                <Field label={t('username')} value={draftProfile.username} onChange={(v) => setDraftProfile({ ...draftProfile, username: v.toLowerCase().replace(/[^a-z0-9-]/g, '') })} prefix={`${siteHost}/`} placeholder="username" note={<UsernameNote status={usernameStatus} />} invalid={usernameStatus === 'taken' || usernameStatus === 'short'} />
               </div>
             </div>
 
@@ -1194,7 +1249,8 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
         </div>
       )}
       {kind === 'links' && (
-        <div className="max-w-3xl space-y-3">
+        <div className="grid gap-8 lg:grid-cols-[1fr_0.75fr] lg:items-start">
+        <div className="space-y-3">
           {draftLinks.length === 0 && (
             <div className="rounded-2xl border border-dashed bg-card/50 px-6 py-10 text-center">
               <Link2 className="mx-auto size-6 text-muted-foreground" />
@@ -1254,9 +1310,12 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
           ))}
           <button onClick={addLink} className="rounded-full border px-4 py-2 text-sm transition hover:border-foreground/40"><Plus className="mr-1 inline size-4" />{t('addLink')}</button>
         </div>
+        <div className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:self-start"><LivePreview profile={draftProfile} links={draftLinks} projects={draftProjects} /></div>
+        </div>
       )}
       {kind === 'projects' && (
-        <div className="max-w-3xl space-y-3">
+        <div className="grid gap-8 lg:grid-cols-[1fr_0.75fr] lg:items-start">
+        <div className="space-y-3">
           {draftProjects.length === 0 && (
             <div className="rounded-2xl border border-dashed bg-card/50 px-6 py-10 text-center">
               <Layers className="mx-auto size-6 text-muted-foreground" />
@@ -1288,6 +1347,8 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
             </div>
           ))}
           <button onClick={addProject} className="rounded-full border px-4 py-2 text-sm transition hover:border-foreground/40"><Plus className="mr-1 inline size-4" />{t('addProject')}</button>
+        </div>
+        <div className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:self-start"><LivePreview profile={draftProfile} links={draftLinks} projects={draftProjects} /></div>
         </div>
       )}
     </>
@@ -1629,7 +1690,16 @@ function Onboarding() {
   ]
   const isLast = step === steps.length - 1
   const setField = (patch: Partial<Profile>) => setDraft({ ...draft, ...patch })
+  // Onboarding has no saved username yet (profile.username starts empty for a new account),
+  // so any non-empty handle here has to clear the same availability check as the editor
+  // before "Launch" is allowed to write it.
+  const usernameStatus = useUsernameStatus(draft.username, profile.username, uid)
+  const usernameBlocksFinish = usernameStatus === 'checking' || usernameStatus === 'taken' || usernameStatus === 'short'
   async function finish() {
+    if (usernameBlocksFinish) {
+      setFinishError(usernameStatus === 'taken' ? t('usernameTaken') : usernameStatus === 'short' ? t('usernameTooShort') : t('usernameChecking'))
+      return
+    }
     setBusy(true); setFinishError('')
     try {
       await persistProfile({ ...draft, isPublic: draft.isPublic ?? true, onboarded: true })
@@ -1656,7 +1726,7 @@ function Onboarding() {
         {step === 0 && (
           <div className="mt-6 space-y-4">
             <Field label={t('displayName')} value={draft.displayName} onChange={(v) => setField({ displayName: v })} />
-            <Field label={t('username')} value={draft.username} prefix={`${siteHost}/`} onChange={(v) => setField({ username: v.toLowerCase().replace(/[^a-z0-9-]/g, '') })} />
+            <Field label={t('username')} value={draft.username} prefix={`${siteHost}/`} onChange={(v) => setField({ username: v.toLowerCase().replace(/[^a-z0-9-]/g, '') })} note={<UsernameNote status={usernameStatus} />} invalid={usernameStatus === 'taken' || usernameStatus === 'short'} />
             <Field label={t('headline')} value={draft.headline} onChange={(v) => setField({ headline: v })} />
           </div>
         )}
@@ -1726,7 +1796,7 @@ function Onboarding() {
         {finishError && <p role="alert" className="mt-6 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">{finishError}</p>}
         <div className="mt-8 flex items-center justify-between">
           <button onClick={() => setStep((s) => Math.max(s - 1, 0))} disabled={step === 0} className="rounded-full border px-5 py-3 text-sm transition hover:border-foreground/40 disabled:opacity-40">{t('stepBack')}</button>
-          {isLast ? <button onClick={finish} disabled={busy} className="flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground disabled:opacity-50">{busy ? <Loader2 className="size-4 animate-spin" /> : t('stepLaunch')}<ArrowUpRight className="size-4" /></button> : <button onClick={() => setStep((s) => Math.min(s + 1, steps.length - 1))} className="flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground">{t('stepNext')}<ArrowUpRight className="size-4" /></button>}
+          {isLast ? <button onClick={finish} disabled={busy || usernameBlocksFinish} className="flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground disabled:opacity-50">{busy ? <Loader2 className="size-4 animate-spin" /> : t('stepLaunch')}<ArrowUpRight className="size-4" /></button> : <button onClick={() => setStep((s) => Math.min(s + 1, steps.length - 1))} className="flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground">{t('stepNext')}<ArrowUpRight className="size-4" /></button>}
         </div>
       </div>
       {/* A live preview beside every step (not just the final privacy step) means the person
@@ -1737,8 +1807,41 @@ function Onboarding() {
   )
 }
 
-function Field({ label, value, onChange, area, prefix, placeholder }: { label: string; value: string; onChange: (value: string) => void; area?: boolean; prefix?: string; placeholder?: string }) {
-  return <label className="block text-sm">{label}<div className="mt-2 flex">{prefix && <span className="shrink-0 rounded-l-lg border border-r-0 bg-secondary px-3 py-2 text-xs text-muted-foreground">{prefix}</span>}{area ? <textarea value={value} onChange={(e) => onChange(e.target.value)} className="min-h-28 w-full min-w-0 rounded-lg border bg-background px-3 py-2" /> : <input value={value} onChange={(e) => onChange(e.target.value)} className={`w-full min-w-0 rounded-lg border bg-background px-3 py-2 ${prefix ? 'rounded-l-none' : ''}`} placeholder={placeholder} />}</div></label>
+function Field({ label, value, onChange, area, prefix, placeholder, note, invalid }: { label: string; value: string; onChange: (value: string) => void; area?: boolean; prefix?: string; placeholder?: string; note?: React.ReactNode; invalid?: boolean }) {
+  return <label className="block text-sm">{label}<div className={`mt-2 flex ${invalid ? 'rounded-lg ring-1 ring-destructive' : ''}`}>{prefix && <span className="shrink-0 rounded-l-lg border border-r-0 bg-secondary px-3 py-2 text-xs text-muted-foreground">{prefix}</span>}{area ? <textarea value={value} onChange={(e) => onChange(e.target.value)} className="min-h-28 w-full min-w-0 rounded-lg border bg-background px-3 py-2" /> : <input value={value} onChange={(e) => onChange(e.target.value)} className={`w-full min-w-0 rounded-lg border bg-background px-3 py-2 ${prefix ? 'rounded-l-none' : ''}`} placeholder={placeholder} />}</div>{note}</label>
+}
+
+type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'short'
+
+// Shared by the profile editor and the onboarding wizard — both let someone type a handle,
+// and in both places it has to be checked against every other account's handle before it's
+// safe to save, since pexiloq.com/<handle> only has room for one owner.
+function useUsernameStatus(value: string, savedUsername: string, uid: string | null): UsernameStatus {
+  const [status, setStatus] = useState<UsernameStatus>('idle')
+  useEffect(() => {
+    if (!value || value === savedUsername) { setStatus('idle'); return }
+    if (value.length < 3) { setStatus('short'); return }
+    let cancelled = false
+    setStatus('checking')
+    const handle = window.setTimeout(async () => {
+      if (!uid || !firebaseEnabled) { if (!cancelled) setStatus('available'); return }
+      try {
+        const ok = await isUsernameAvailable(value, uid)
+        if (!cancelled) setStatus(ok ? 'available' : 'taken')
+      } catch { if (!cancelled) setStatus('available') }
+    }, 450)
+    return () => { cancelled = true; window.clearTimeout(handle) }
+  }, [value, savedUsername, uid])
+  return status
+}
+
+function UsernameNote({ status }: { status: UsernameStatus }) {
+  const { t } = useI18n()
+  if (status === 'idle') return null
+  if (status === 'checking') return <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="size-3 animate-spin" />{t('usernameChecking')}</p>
+  if (status === 'available') return <p className="mt-1.5 flex items-center gap-1.5 text-xs text-emerald-600"><Check className="size-3" />{t('usernameAvailable')}</p>
+  if (status === 'taken') return <p className="mt-1.5 flex items-center gap-1.5 text-xs text-destructive"><CircleAlert className="size-3" />{t('usernameTaken')}</p>
+  return <p className="mt-1.5 flex items-center gap-1.5 text-xs text-destructive"><CircleAlert className="size-3" />{t('usernameTooShort')}</p>
 }
 
 const R2_MAX_BYTES = 10 * 1024 * 1024
@@ -2219,7 +2322,13 @@ function LivePreview({ profile, links, projects, note = true }: { profile: Profi
   const [device, setDevice] = useState<PreviewDevice>('phone')
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      {/* The parent panel is itself sticky with its own max-height + overflow-y-auto (so a
+         preview taller than the viewport scrolls independently of the form on the left). That
+         means this row needs its own `sticky top-0` — without it, scrolling that inner panel
+         carries the toggle out of view along with the frame, leaving no way to switch device
+         mid-scroll. Pinning it to the top of its own scroll container, with a background so the
+         frame doesn't show through underneath it, keeps it reachable at all times. */}
+      <div className="sticky top-0 z-10 mb-4 flex flex-wrap items-center justify-between gap-3 bg-background/95 py-1 backdrop-blur-sm">
         {note ? <PreviewNote /> : <span />}
         <DeviceToggle device={device} onChange={setDevice} />
       </div>
@@ -2418,16 +2527,21 @@ export function PublicProfile({ username }: { username?: string }) {
   const animated = data !== null && data !== 'missing' && data.profile.backgroundStyle === 'gradient' && data.profile.backgroundAnimated
   const overlay = Boolean(data !== null && data !== 'missing' && data.profile.backgroundStyle === 'image' && data.profile.backgroundImageURL && data.profile.backgroundOverlay > 0)
   const pageUid = data !== null && data !== 'missing' ? data.profile.uid : null
+  // The signed-in visitor might be the profile's own owner — checking their own live page from
+  // the workspace ("Share" / "View live"), scanning their own QR code, or clicking their own
+  // links to test them. None of that is a real visitor, so it must never inflate their own
+  // analytics.
+  const isOwnerViewing = Boolean(user && pageUid && user.uid === pageUid)
   // Only a genuinely public profile page counts as a "view" — a private profile shows nothing
   // but a locked notice, so opening it (by the owner previewing their own link, a stale bookmark,
   // etc.) must never be recorded as a visitor view.
   const isPublicProfile = data !== null && data !== 'missing' && data.profile.isPublic !== false
   useEffect(() => {
-    if (pageUid && isPublicProfile && viewRecorded.current !== pageUid && shouldRecordView(pageUid)) { viewRecorded.current = pageUid; void recordAnalytics(pageUid, 'views') }
-  }, [pageUid, isPublicProfile])
+    if (pageUid && isPublicProfile && !isOwnerViewing && viewRecorded.current !== pageUid && shouldRecordView(pageUid)) { viewRecorded.current = pageUid; void recordAnalytics(pageUid, 'views') }
+  }, [pageUid, isPublicProfile, isOwnerViewing])
   if (data === null) return <LoadingScreen />
   const track = (type: 'links' | 'projects' | 'socials', key: string) => {
-    if (!pageUid) return
+    if (!pageUid || isOwnerViewing) return
     const fingerprint = `${type}:${key}`
     if (lastClick.current === fingerprint) return // guards against duplicate fires (e.g. double-click/bubbled events)
     lastClick.current = fingerprint

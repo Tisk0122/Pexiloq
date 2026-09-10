@@ -46,6 +46,18 @@ export async function loadProfileByUsername(username: string) {
   return snap.docs[0]?.data() || null
 }
 
+// Handles are how a profile is shared and found (pexiloq.com/<username>), so two accounts can
+// never hold the same one — whoever's page loads second would silently shadow the first. This
+// checks the *current* owner of a handle (if any) so the dashboard can block a change before it
+// ever reaches Firestore, rather than discovering a collision after two people have already
+// saved the same value.
+export async function isUsernameAvailable(username: string, ownUid: string): Promise<boolean> {
+  if (!firebaseEnabled) return true
+  const existing = await loadProfileByUsername(username)
+  if (!existing) return true
+  return (existing as { uid?: string }).uid === ownUid
+}
+
 // --- links & projects storage -------------------------------------------------
 // These used to live in per-item subcollections (users/{uid}/links/{id}, .../projects/{id}).
 // That meant a single page view or save could cost N+1 Firestore reads/writes (one per item),
