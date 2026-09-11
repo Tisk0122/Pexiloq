@@ -24,8 +24,8 @@ export type BackgroundPattern = 'dots' | 'grid' | 'lines'
 export type SocialPlatform = 'twitter' | 'facebook' | 'instagram' | 'github' | 'linkedin' | 'youtube' | 'tiktok' | 'telegram' | 'whatsapp' | 'email'
 export type TwitterIcon = 'x' | 'bird'
 export const socialPlatforms: SocialPlatform[] = ['twitter', 'facebook', 'instagram', 'github', 'linkedin', 'youtube', 'tiktok', 'telegram', 'whatsapp', 'email']
-export type LayoutTemplate = 'classic' | 'grid' | 'magazine' | 'card'
-export const layoutTemplates: LayoutTemplate[] = ['classic', 'grid', 'magazine', 'card']
+export type LayoutTemplate = 'classic' | 'grid' | 'magazine'
+export const layoutTemplates: LayoutTemplate[] = ['classic', 'grid', 'magazine']
 export type SectionKind = 'links' | 'projects'
 export const defaultSectionOrder: SectionKind[] = ['links', 'projects']
 export type ColorThemePack = 'custom' | 'minimal' | 'neon' | 'pastel' | 'darkLuxury'
@@ -717,17 +717,6 @@ function LinksSection({ profile, links, skin, layout, onTrack }: { profile: Prof
         </a>
       )
     }
-    if (fallback === 'card') {
-      return (
-        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} {...linkStyle(item, `group ${baseLinkClass} ${spacing.linkPad} shadow-[0_10px_30px_rgba(35,35,30,0.08)]`)}>
-          <span className="flex min-w-0 items-center gap-3">
-            {iconChip(item)}
-            <span className="truncate">{item.title}</span>
-          </span>
-          <ExternalLink className="size-4 shrink-0 opacity-70 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-        </a>
-      )
-    }
     if (fallback === 'magazine') {
       return (
         <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} className={`flex items-center gap-4 rounded-2xl border p-3 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 ${skin.bar}`}>
@@ -755,9 +744,6 @@ function LinksSection({ profile, links, skin, layout, onTrack }: { profile: Prof
 
   if (layout === 'grid') {
     return <div className={`${spacing.sectionGap} grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3`}>{visibleLinks.map((item) => renderLink(item, 'grid'))}</div>
-  }
-  if (layout === 'card') {
-    return <div className={`${spacing.sectionGap} ${spacing.linkGap}`}>{visibleLinks.map((item) => renderLink(item, 'card'))}</div>
   }
   if (layout === 'magazine') {
     return <div className={`${spacing.sectionGap} space-y-3`}>{visibleLinks.map((item) => renderLink(item, 'magazine'))}</div>
@@ -831,8 +817,7 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
   const socialFilled = profile.socialStyle === 'filled'
   const layout: LayoutTemplate = layoutTemplates.includes(profile.layoutTemplate) ? profile.layoutTemplate : 'classic'
   const sectionOrder: SectionKind[] = profile.sectionOrder?.length ? profile.sectionOrder : defaultSectionOrder
-  const maxWidth = layout === 'magazine' ? 'max-w-md' : layout === 'card' ? 'max-w-2xl' : 'max-w-xl'
-  const isNameCard = layout === 'card'
+  const maxWidth = layout === 'magazine' ? 'max-w-md' : 'max-w-xl'
   const sections: Record<SectionKind, React.ReactNode> = {
     links: <LinksSection key="links" profile={profile} links={links} skin={skin} layout={layout} onTrack={onTrack} />,
     projects: <ProjectsSection key="projects" profile={profile} projects={projects} skin={skin} layout={layout} onTrack={onTrack} t={t} />,
@@ -877,52 +862,48 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
           <a href={qrCodeFor(`https://${typeof window !== 'undefined' ? window.location.host : siteHost}/${profile.username}`, 512)} download={`${profile.username}-pexiloq-qr.png`} target="_blank" rel="noreferrer" className="text-xs underline underline-offset-4" style={{ color: profile.accentColor }}>{t('downloadQr')}</a>
         </div>
       )}
-      <div className={`px-2 pb-6 pt-7 sm:px-6 ${isNameCard ? 'text-left sm:flex sm:items-start sm:gap-8' : 'text-center'} ${profile.coverImageURL ? '-mt-7' : ''}`}>
-        <div className={isNameCard ? 'sm:w-64 sm:shrink-0 sm:text-left text-center' : ''}>
-          {profile.showAvatar && (
-            <div
-              className={`${isNameCard ? 'mx-auto sm:mx-0' : 'mx-auto'} ${profile.coverImageURL ? '-mt-3' : ''} relative grid size-24 place-items-center overflow-hidden text-xl font-medium ${dark ? 'bg-white/10 text-[#f5f5f2]' : 'bg-secondary text-[#151515]'} ${avatarShapeClass[profile.avatarShape]} ${profile.avatarAnimation === 'pulse' ? 'pexiloq-avatar-pulse' : ''} ${profile.avatarAnimation === 'spin' ? 'pexiloq-avatar-spin' : ''} ${profile.avatarAnimation === 'glow' ? 'pexiloq-avatar-glow' : ''}`}
-              style={{
-                // The ring always derives from the profile's own accent color, never a fixed
-                // hue, so it can't clash with a brand-colored avatar. A themed background
-                // ring plus a soft shadow lifts the avatar off a cover photo edge cleanly.
-                ...(profile.avatarRing ? { outline: `3px solid ${profile.accentColor}`, outlineOffset: 2 } : undefined),
-                boxShadow: profile.coverImageURL ? `0 4px 16px rgba(0,0,0,0.18)` : `0 10px 24px -8px rgba(21,21,21,0.18)`,
-                ...(profile.avatarAnimation === 'spin' || profile.avatarAnimation === 'glow' ? ({ '--pexiloq-avatar-ring-color': profile.accentColor } as React.CSSProperties) : undefined),
-              }}
-            >
-              {profile.photoURL ? <CardImg src={profile.photoURL} alt={profile.displayName} className={`size-full ${avatarShapeClass[profile.avatarShape]}`} /> : profile.displayName.slice(0, 2).toUpperCase()}
-            </div>
+      <div className={`px-2 pb-6 pt-7 text-center sm:px-6 ${profile.coverImageURL ? '-mt-7' : ''}`}>
+        {profile.showAvatar && (
+          <div
+            className={`mx-auto ${profile.coverImageURL ? '-mt-3' : ''} relative grid size-24 place-items-center overflow-hidden text-xl font-medium ${dark ? 'bg-white/10 text-[#f5f5f2]' : 'bg-secondary text-[#151515]'} ${avatarShapeClass[profile.avatarShape]} ${profile.avatarAnimation === 'pulse' ? 'pexiloq-avatar-pulse' : ''} ${profile.avatarAnimation === 'spin' ? 'pexiloq-avatar-spin' : ''} ${profile.avatarAnimation === 'glow' ? 'pexiloq-avatar-glow' : ''}`}
+            style={{
+              // The ring always derives from the profile's own accent color, never a fixed
+              // hue, so it can't clash with a brand-colored avatar. A themed background
+              // ring plus a soft shadow lifts the avatar off a cover photo edge cleanly.
+              ...(profile.avatarRing ? { outline: `3px solid ${profile.accentColor}`, outlineOffset: 2 } : undefined),
+              boxShadow: profile.coverImageURL ? `0 4px 16px rgba(0,0,0,0.18)` : `0 10px 24px -8px rgba(21,21,21,0.18)`,
+              ...(profile.avatarAnimation === 'spin' || profile.avatarAnimation === 'glow' ? ({ '--pexiloq-avatar-ring-color': profile.accentColor } as React.CSSProperties) : undefined),
+            }}
+          >
+            {profile.photoURL ? <CardImg src={profile.photoURL} alt={profile.displayName} className={`size-full ${avatarShapeClass[profile.avatarShape]}`} /> : profile.displayName.slice(0, 2).toUpperCase()}
+          </div>
+        )}
+        <h1 className={`${profile.showAvatar ? 'mt-5' : ''} flex items-center justify-center gap-1.5 text-[1.85rem] font-medium leading-[1.15] tracking-[-0.045em] ${font}`}>
+          <span className="min-w-0 truncate">{profile.displayName}</span>
+          {profile.showVerifiedBadge && (
+            <span aria-label={t('verifiedBadge')} title={t('verifiedBadge')} className="inline-grid size-5 shrink-0 place-items-center rounded-full text-white" style={{ backgroundColor: profile.accentColor }}>
+              <Check className="size-3" strokeWidth={3} />
+            </span>
           )}
-          <h1 className={`${profile.showAvatar ? 'mt-5' : ''} flex items-center gap-1.5 text-[1.85rem] font-medium leading-[1.15] tracking-[-0.045em] ${font} ${isNameCard ? '' : 'justify-center'}`}>
-            <span className="min-w-0 truncate">{profile.displayName}</span>
-            {profile.showVerifiedBadge && (
-              <span aria-label={t('verifiedBadge')} title={t('verifiedBadge')} className="inline-grid size-5 shrink-0 place-items-center rounded-full text-white" style={{ backgroundColor: profile.accentColor }}>
-                <Check className="size-3" strokeWidth={3} />
-              </span>
-            )}
-          </h1>
-          {profile.headline && <p className={`mt-1.5 text-sm font-medium ${skin.sub}`}>{profile.headline}</p>}
-          {profile.bio && <p className={`mt-4 text-sm leading-6 ${skin.sub} ${isNameCard ? 'sm:max-w-none' : 'mx-auto max-w-sm'}`}>{profile.bio}</p>}
-          {profile.website && (
-            <a href={profile.website} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-medium underline decoration-current/30 underline-offset-4 transition hover:decoration-current/70" style={{ color: profile.accentColor }}>
-              {profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
-            </a>
-          )}
-          {Object.entries(profile.socials || {}).filter(([, v]) => v).length > 0 && (
-            <div className={`mt-5 flex flex-wrap items-center gap-2 ${isNameCard ? 'justify-center sm:justify-start' : 'justify-center'}`}>
-              {socialPlatforms.filter((p) => profile.socials?.[p]).map((p) => {
-                const value = profile.socials![p]!
-                const href = socialHref(p, value, profile.twitterIcon)
-                return <a key={p} href={href} target="_blank" rel="noreferrer" aria-label={socialMeta[p].label} onClick={() => onTrack?.('socials', p)} className={`grid size-9 place-items-center rounded-full transition duration-200 hover:-translate-y-0.5 hover:shadow-sm focus-visible:-translate-y-0.5 active:translate-y-0 ${socialFilled ? '' : `border ${skin.bar}`}`} style={socialFilled ? { backgroundColor: profile.accentColor, color: '#ffffff' } : undefined}><SocialGlyph platform={p} twitterIcon={profile.twitterIcon} className="size-4" /></a>
-              })}
-            </div>
-          )}
-        </div>
-        <div className={isNameCard ? 'mt-8 min-w-0 flex-1 sm:mt-0' : ''}>
-          {sectionOrder.map((key) => <div key={key}>{sections[key]}</div>)}
-        </div>
+        </h1>
+        {profile.headline && <p className={`mt-1.5 text-sm font-medium ${skin.sub}`}>{profile.headline}</p>}
+        {profile.bio && <p className={`mt-4 text-sm leading-6 mx-auto max-w-sm ${skin.sub}`}>{profile.bio}</p>}
+        {profile.website && (
+          <a href={profile.website} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-medium underline decoration-current/30 underline-offset-4 transition hover:decoration-current/70" style={{ color: profile.accentColor }}>
+            {profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+          </a>
+        )}
+        {Object.entries(profile.socials || {}).filter(([, v]) => v).length > 0 && (
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+            {socialPlatforms.filter((p) => profile.socials?.[p]).map((p) => {
+              const value = profile.socials![p]!
+              const href = socialHref(p, value, profile.twitterIcon)
+              return <a key={p} href={href} target="_blank" rel="noreferrer" aria-label={socialMeta[p].label} onClick={() => onTrack?.('socials', p)} className={`grid size-9 place-items-center rounded-full transition duration-200 hover:-translate-y-0.5 hover:shadow-sm focus-visible:-translate-y-0.5 active:translate-y-0 ${socialFilled ? '' : `border ${skin.bar}`}`} style={socialFilled ? { backgroundColor: profile.accentColor, color: '#ffffff' } : undefined}><SocialGlyph platform={p} twitterIcon={profile.twitterIcon} className="size-4" /></a>
+            })}
+          </div>
+        )}
       </div>
+      {sectionOrder.map((key) => <div key={key}>{sections[key]}</div>)}
       {profile.showBadge && (
         <div className={`mt-2 flex justify-center border-t pt-4 ${skin.bar}`}>
           <a
@@ -1359,7 +1340,6 @@ const layoutPreviewBars: Record<LayoutTemplate, { shape: string; count: number }
   classic: { shape: 'bar', count: 3 },
   grid: { shape: 'tile', count: 6 },
   magazine: { shape: 'row', count: 2 },
-  card: { shape: 'split', count: 1 },
 }
 
 function LayoutPreview({ layout, accent }: { layout: LayoutTemplate; accent: string }) {
@@ -1369,9 +1349,6 @@ function LayoutPreview({ layout, accent }: { layout: LayoutTemplate; accent: str
   }
   if (cfg.shape === 'row') {
     return <div className="flex flex-col gap-1.5 p-2">{Array.from({ length: cfg.count }).map((_, i) => <div key={i} className="h-4 rounded-[3px]" style={{ backgroundColor: `${accent}33` }} />)}<div className="mt-1 h-6 rounded-[3px]" style={{ backgroundColor: `${accent}55` }} /></div>
-  }
-  if (cfg.shape === 'split') {
-    return <div className="flex h-full gap-1.5 p-2"><div className="w-1/3 rounded-[3px]" style={{ backgroundColor: `${accent}55` }} /><div className="flex flex-1 flex-col gap-1.5">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-3 rounded-[3px]" style={{ backgroundColor: `${accent}33` }} />)}</div></div>
   }
   return <div className="flex flex-col items-center gap-1.5 p-2">{Array.from({ length: cfg.count }).map((_, i) => <div key={i} className="h-3.5 w-full rounded-[3px]" style={{ backgroundColor: `${accent}33` }} />)}</div>
 }
