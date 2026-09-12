@@ -24,8 +24,8 @@ export type BackgroundPattern = 'dots' | 'grid' | 'lines'
 export type SocialPlatform = 'twitter' | 'facebook' | 'instagram' | 'github' | 'linkedin' | 'youtube' | 'tiktok' | 'telegram' | 'whatsapp' | 'email'
 export type TwitterIcon = 'x' | 'bird'
 export const socialPlatforms: SocialPlatform[] = ['twitter', 'facebook', 'instagram', 'github', 'linkedin', 'youtube', 'tiktok', 'telegram', 'whatsapp', 'email']
-export type LayoutTemplate = 'classic' | 'grid' | 'magazine'
-export const layoutTemplates: LayoutTemplate[] = ['classic', 'grid', 'magazine']
+export type LayoutTemplate = 'classic'
+export const layoutTemplates: LayoutTemplate[] = ['classic']
 export type SectionKind = 'links' | 'projects'
 export const defaultSectionOrder: SectionKind[] = ['links', 'projects']
 export type ColorThemePack = 'custom' | 'minimal' | 'neon' | 'pastel' | 'darkLuxury'
@@ -222,10 +222,10 @@ export type ShowcaseStyle = 'minimal' | 'afterHours' | 'bright'
 export type ShowcaseProfile = { style: ShowcaseStyle; bundle: TemplateBundle }
 
 // Three real, fully-rendered Pexiloq pages spanning the range of what the customization
-// options actually produce: the same classic light layout used in langTemplates, a dark
-// "magazine" layout with a gold accent, and a light "grid" layout on a soft gradient.
-// Every field here is a genuine Profile/LinkItem/Project — these render through the exact
-// same <ProfileCard> the dashboard and public pages use, nothing is faked for the marketing site.
+// options actually produce: the same classic layout used in langTemplates, a dark look with
+// a gold accent, and a light pastel gradient look. Every field here is a genuine
+// Profile/LinkItem/Project — these render through the exact same <ProfileCard> the dashboard
+// and public pages use, nothing is faked for the marketing site.
 export function showcaseTemplates(lang?: string): ShowcaseProfile[] {
   const l = lang && showcaseCopy[lang] ? lang : 'en'
   const amira = langTemplates[l] || langTemplates.en
@@ -242,7 +242,7 @@ export function showcaseTemplates(lang?: string): ShowcaseProfile[] {
           username: 'kenji', displayName: 'Kenji Aoyama', headline: c.kenji.headline, bio: c.kenji.bio, website: '',
           accentColor: '#c9a24b', theme: 'dark', backgroundStyle: 'default', backgroundColor: '#0f0f0d',
           buttonStyle: 'outline', avatarShape: 'rounded', cardRadius: '2xl', spacing: 'cozy', socialStyle: 'filled',
-          layoutTemplate: 'magazine', socials: { twitter: 'kenjimixes', instagram: 'kenji.mixes', youtube: '@kenjimixes' },
+          socials: { twitter: 'kenjimixes', instagram: 'kenji.mixes', youtube: '@kenjimixes' },
         }),
         links: personaLinks(c.kenji.links, ['https://soundcloud.com', 'https://youtube.com', 'https://example.com']),
         projects: personaProjects(c.kenji.projects),
@@ -256,7 +256,7 @@ export function showcaseTemplates(lang?: string): ShowcaseProfile[] {
           accentColor: '#d98aa0', theme: 'light', backgroundStyle: 'gradient',
           backgroundGradient: 'radial-gradient(120% 120% at 0% 0%, #fde2e4 0%, transparent 60%), radial-gradient(130% 130% at 100% 100%, #e4f0fd 0%, transparent 60%)',
           buttonStyle: 'solid', avatarShape: 'square', cardRadius: '3xl', spacing: 'spacious', socialStyle: 'outline',
-          layoutTemplate: 'grid', socials: { instagram: 'noa.frames', tiktok: '@noa.frames', youtube: '@noalindgren' },
+          socials: { instagram: 'noa.frames', tiktok: '@noa.frames', youtube: '@noalindgren' },
         }),
         links: personaLinks(c.noa.links, ['https://example.com', 'https://instagram.com', 'https://example.com']),
         projects: personaProjects(c.noa.projects),
@@ -638,7 +638,7 @@ function CardImg({ src, alt, className, fit = 'auto', style }: { src: string; al
 type Skin = { card: string; sub: string; bar: string; strip: string; strongText: string }
 type CardTrack = (type: 'links' | 'projects' | 'socials', key: string) => void
 
-function LinksSection({ profile, links, skin, layout, onTrack }: { profile: Profile; links: LinkItem[]; skin: Skin; layout: LayoutTemplate; onTrack?: CardTrack }) {
+function LinksSection({ profile, links, skin, onTrack }: { profile: Profile; links: LinkItem[]; skin: Skin; onTrack?: CardTrack }) {
   const visibleLinks = links.filter((item) => item.visible)
   if (!visibleLinks.length) return null
   const dark = profile.theme === 'dark'
@@ -672,8 +672,8 @@ function LinksSection({ profile, links, skin, layout, onTrack }: { profile: Prof
     )
   }
 
-  // A link's own displayStyle (if set) overrides the layout template's default look for that one link.
-  function renderLink(item: LinkItem, fallback: LayoutTemplate | 'default') {
+  // A link's own displayStyle (if set) overrides the default look for that one link.
+  function renderLink(item: LinkItem) {
     const style = item.displayStyle && item.displayStyle !== 'default' ? item.displayStyle : null
     if (style === 'text') {
       return (
@@ -708,29 +708,7 @@ function LinksSection({ profile, links, skin, layout, onTrack }: { profile: Prof
         </a>
       )
     }
-    // No per-link override: fall back to the layout template's default look.
-    if (fallback === 'grid') {
-      return (
-        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} {...linkStyle(item, `${baseLinkClass} min-h-20 flex-col justify-center gap-2 px-3 py-4 text-center`)}>
-          <span className="text-xl leading-none">{item.icon || <img src={faviconFor(item.url)} alt="" aria-hidden="true" className="mx-auto size-5 rounded-sm opacity-90" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />}</span>
-          <span className="line-clamp-2 w-full truncate text-xs leading-snug">{item.title}</span>
-        </a>
-      )
-    }
-    if (fallback === 'magazine') {
-      return (
-        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} className={`flex items-center gap-4 rounded-2xl border p-3 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 ${skin.bar}`}>
-          {item.imageURL
-            ? <CardImg src={item.imageURL} alt={item.title} className="size-14 shrink-0 rounded-xl" />
-            : <span className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-xl bg-secondary text-lg">{item.icon || <img src={faviconFor(item.url)} alt="" aria-hidden="true" className="size-6 rounded-sm opacity-90" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />}</span>}
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium">{item.title}</span>
-            <span className={`mt-0.5 block truncate text-xs ${skin.sub}`}>{item.url.replace(/^https?:\/\//, '')}</span>
-          </span>
-          <ExternalLink className="size-4 shrink-0 opacity-50" />
-        </a>
-      )
-    }
+    // No per-link override: default look.
     return (
       <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} {...linkStyle(item, `group ${baseLinkClass} ${spacing.linkPad}`)}>
         <span className="flex min-w-0 items-center gap-3">
@@ -742,16 +720,10 @@ function LinksSection({ profile, links, skin, layout, onTrack }: { profile: Prof
     )
   }
 
-  if (layout === 'grid') {
-    return <div className={`${spacing.sectionGap} grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3`}>{visibleLinks.map((item) => renderLink(item, 'grid'))}</div>
-  }
-  if (layout === 'magazine') {
-    return <div className={`${spacing.sectionGap} space-y-3`}>{visibleLinks.map((item) => renderLink(item, 'magazine'))}</div>
-  }
-  return <div className={`${spacing.sectionGap} ${spacing.linkGap}`}>{visibleLinks.map((item) => renderLink(item, 'default'))}</div>
+  return <div className={`${spacing.sectionGap} ${spacing.linkGap}`}>{visibleLinks.map((item) => renderLink(item))}</div>
 }
 
-function ProjectsSection({ profile, projects, skin, layout, onTrack, t }: { profile: Profile; projects: Project[]; skin: Skin; layout: LayoutTemplate; onTrack?: CardTrack; t: (key: string) => string }) {
+function ProjectsSection({ profile, projects, skin, onTrack, t }: { profile: Profile; projects: Project[]; skin: Skin; onTrack?: CardTrack; t: (key: string) => string }) {
   const visibleProjects = projects.filter((item) => item.visible)
   if (!visibleProjects.length) return null
   const spacing = spacingConfig[profile.spacing || 'cozy']
@@ -762,30 +734,8 @@ function ProjectsSection({ profile, projects, skin, layout, onTrack, t }: { prof
   // picks, the same way link buttons with a custom bgColor already do (see contrastColor above).
   const leadText = contrastColor(profile.accentColor)
   const leadSubText = leadText === '#ffffff' ? 'rgba(255,255,255,0.78)' : 'rgba(21,21,21,0.62)'
-  if (layout === 'magazine') {
-    return (
-      <div className={`${spacing.sectionGap} space-y-4`}>
-        {visibleProjects.map((item, index) => (
-          <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('projects', item.id)} className={`block overflow-hidden rounded-2xl text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 ${index === 0 ? '' : `border ${skin.bar}`}`} style={index === 0 ? { backgroundColor: profile.accentColor, color: leadText } : undefined}>
-            {item.imageURL && <CardImg src={item.imageURL} alt={item.title} className="aspect-[16/9] w-full" />}
-            <div className="p-4">
-              <span className={`text-[10px] font-medium uppercase tracking-widest ${index === 0 ? '' : skin.sub}`} style={index === 0 ? { color: leadSubText } : undefined}>{t('selectedWork')}</span>
-              <p className={`mt-2 text-base font-medium leading-snug ${index === 0 ? '' : skin.strongText}`}>{item.title}</p>
-              {item.description && <p className={`mt-1.5 line-clamp-2 text-xs leading-relaxed ${index === 0 ? '' : skin.sub}`} style={index === 0 ? { color: leadSubText } : undefined}>{item.description}</p>}
-            </div>
-          </a>
-        ))}
-      </div>
-    )
-  }
-  const cols = layout === 'grid' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
-  // skin.strip carries a muted foreground (it's meant for the small-caps caption), so it can't
-  // be applied to the whole card — the title would inherit that same washed-out gray with
-  // nothing to darken it back. Split it: the card wrapper keeps skin.strip for its background
-  // and default (caption/description) tone, and the title gets skin.card's stronger text color
-  // explicitly so it stays legible regardless of theme.
   return (
-    <div className={`${spacing.sectionGap} grid gap-3 ${cols}`}>
+    <div className={`${spacing.sectionGap} grid gap-3 sm:grid-cols-2`}>
       {visibleProjects.map((item, index) => (
         <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('projects', item.id)} className={`flex min-h-32 flex-col rounded-xl p-4 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 ${index === 0 ? '' : skin.strip}`} style={index === 0 ? { backgroundColor: profile.accentColor, color: leadText } : undefined}>
           {item.imageURL && <div className="mb-3"><CardImg src={item.imageURL} alt={item.title} className="aspect-[16/10] w-full rounded-lg" /></div>}
@@ -815,15 +765,13 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
   }
   const cardShadow = profile.cardShadow === false ? '' : 'shadow-[0_20px_60px_rgba(35,35,30,0.08)]'
   const socialFilled = profile.socialStyle === 'filled'
-  const layout: LayoutTemplate = layoutTemplates.includes(profile.layoutTemplate) ? profile.layoutTemplate : 'classic'
   const sectionOrder: SectionKind[] = profile.sectionOrder?.length ? profile.sectionOrder : defaultSectionOrder
-  const maxWidth = layout === 'magazine' ? 'max-w-md' : 'max-w-xl'
   const sections: Record<SectionKind, React.ReactNode> = {
-    links: <LinksSection key="links" profile={profile} links={links} skin={skin} layout={layout} onTrack={onTrack} />,
-    projects: <ProjectsSection key="projects" profile={profile} projects={projects} skin={skin} layout={layout} onTrack={onTrack} t={t} />,
+    links: <LinksSection key="links" profile={profile} links={links} skin={skin} onTrack={onTrack} />,
+    projects: <ProjectsSection key="projects" profile={profile} projects={projects} skin={skin} onTrack={onTrack} t={t} />,
   }
   return (
-    <div className={`pexiloq-fade-in mx-auto ${maxWidth} ${font} overflow-hidden border ${cardShadow} ${radius} ${skin.card} ${preview ? '' : 'my-8'}`}>
+    <div className={`pexiloq-fade-in mx-auto max-w-xl ${font} overflow-hidden border ${cardShadow} ${radius} ${skin.card} ${preview ? '' : 'my-8'}`}>
       {profile.coverImageURL && (
         <div className="w-full" style={{ height: `${profile.coverImageHeight || 140}px` }}>
           <CardImg
@@ -1336,23 +1284,6 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
   )
 }
 
-const layoutPreviewBars: Record<LayoutTemplate, { shape: string; count: number }> = {
-  classic: { shape: 'bar', count: 3 },
-  grid: { shape: 'tile', count: 6 },
-  magazine: { shape: 'row', count: 2 },
-}
-
-function LayoutPreview({ layout, accent }: { layout: LayoutTemplate; accent: string }) {
-  const cfg = layoutPreviewBars[layout]
-  if (cfg.shape === 'tile') {
-    return <div className="grid grid-cols-3 gap-1 p-2">{Array.from({ length: cfg.count }).map((_, i) => <div key={i} className="aspect-square rounded-[3px]" style={{ backgroundColor: `${accent}33` }} />)}</div>
-  }
-  if (cfg.shape === 'row') {
-    return <div className="flex flex-col gap-1.5 p-2">{Array.from({ length: cfg.count }).map((_, i) => <div key={i} className="h-4 rounded-[3px]" style={{ backgroundColor: `${accent}33` }} />)}<div className="mt-1 h-6 rounded-[3px]" style={{ backgroundColor: `${accent}55` }} /></div>
-  }
-  return <div className="flex flex-col items-center gap-1.5 p-2">{Array.from({ length: cfg.count }).map((_, i) => <div key={i} className="h-3.5 w-full rounded-[3px]" style={{ backgroundColor: `${accent}33` }} />)}</div>
-}
-
 function AppearanceControls({ draft, onChange, uid }: { draft: Profile; onChange: (next: Profile) => void; uid?: string | null }) {
   const { t } = useI18n()
   const [dragSection, setDragSection] = useState<number | null>(null)
@@ -1368,17 +1299,6 @@ function AppearanceControls({ draft, onChange, uid }: { draft: Profile; onChange
   }
   return (
     <div className="space-y-10">
-      <section>
-        <p className="text-sm font-medium"><Layers className="mr-2 inline size-4 text-muted-foreground" />{t('layoutTemplate')}</p>
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {layoutTemplates.map((layout) => (
-            <button key={layout} onClick={() => onChange({ ...draft, layoutTemplate: layout })} aria-pressed={draft.layoutTemplate === layout} className={`overflow-hidden rounded-xl border text-left transition ${draft.layoutTemplate === layout ? 'border-foreground ring-2 ring-foreground/20' : 'hover:border-foreground/40'}`}>
-              <div className="h-16 bg-secondary/60"><LayoutPreview layout={layout} accent={draft.accentColor} /></div>
-              <p className="border-t px-2 py-1.5 text-xs font-medium capitalize">{t(`layout${layout.charAt(0).toUpperCase()}${layout.slice(1)}`)}</p>
-            </button>
-          ))}
-        </div>
-      </section>
       <section>
         <p className="text-sm font-medium"><GripVertical className="mr-2 inline size-4 text-muted-foreground" />{t('sectionOrder')}</p>
         <p className="mt-1 text-xs text-muted-foreground">{t('sectionOrderHint')}</p>
