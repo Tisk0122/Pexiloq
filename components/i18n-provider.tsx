@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { Check, ChevronDown, Globe2 } from 'lucide-react'
 import { siteName } from '@/lib/site'
@@ -864,19 +864,33 @@ const TAB_TITLE_ROUTES: [prefix: string, key: string][] = [
 export function TranslationMeta() {
   const { language, t } = useI18n()
   const pathname = usePathname()
+  const routePath = pathname || '/'
   useEffect(() => { document.documentElement.lang = language }, [language])
-  useEffect(() => {
+  const isKnownRoute = routePath === '/' || TAB_TITLE_ROUTES.some(([prefix]) => routePath.startsWith(prefix))
+  const match = TAB_TITLE_ROUTES.find(([prefix]) => routePath.startsWith(prefix))
+  const localizedTitle = match ? `${t(match[1])} · ${siteName}` : `${siteName} — ${t('heroTitle')}`
+  useLayoutEffect(() => {
     // Routes with their own server-rendered title (currently just the public
     // `/[username]` profile pages, which title themselves after the profile
     // owner's actual name) manage document.title on their own — updating it
     // here on every language switch would stomp that with the generic site
     // title, so leave anything that isn't a known static route alone.
-    const isKnownRoute = pathname === '/' || TAB_TITLE_ROUTES.some(([prefix]) => pathname.startsWith(prefix))
     if (!isKnownRoute) return
-
-    const match = TAB_TITLE_ROUTES.find(([prefix]) => pathname.startsWith(prefix))
-    document.title = match ? `${t(match[1])} · ${siteName}` : `${siteName} — ${t('heroTitle')}`
-  }, [language, t, pathname])
+    document.head.querySelectorAll('title').forEach((title) => { title.textContent = localizedTitle })
+    document.title = localizedTitle
+  }, [isKnownRoute, localizedTitle])
+  useEffect(() => {
+    if (!isKnownRoute) return
+    const syncTitle = () => {
+      const titles = document.head.querySelectorAll('title')
+      titles.forEach((title) => { title.textContent = localizedTitle })
+      document.title = localizedTitle
+    }
+    syncTitle()
+    const observer = new MutationObserver(syncTitle)
+    observer.observe(document.head, { childList: true, subtree: true, characterData: true })
+    return () => observer.disconnect()
+  }, [isKnownRoute, localizedTitle])
   return null
 }
 export { languages as supportedLanguages }

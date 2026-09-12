@@ -6,7 +6,7 @@ import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState
 import { ArrowUpRight, Check, CircleAlert, Copy, ExternalLink, Eye, GripVertical, Layers, Link2, Loader2, LogOut, Menu, Monitor, Palette, Plus, Save, Settings, Smartphone, Trash2, Type, Upload, UserRound, X, ZoomIn, Zap } from 'lucide-react'
 import { auth, deleteAccount, firebaseEnabled, isUsernameAvailable, loadAnalytics, loadDailyAnalytics, loadPublicBundle, loadUserBundle, recordAnalytics, saveItems, saveProfile, sendVerificationEmail, type DailyPoint } from '@/lib/firebase'
 import { LanguageSwitcher, useI18n } from '@/components/i18n-provider'
-import { siteHost } from '@/lib/site'
+import { siteHost, siteUrl } from '@/lib/site'
 import { deleteUser, EmailAuthProvider, GoogleAuthProvider, onAuthStateChanged, reauthenticateWithCredential, reauthenticateWithPopup, signOut } from 'firebase/auth'
 
 export type LinkDisplayStyle = 'default' | 'large' | 'thumbnail' | 'text'
@@ -393,9 +393,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   onClick={() => setMobile(false)}
                   href={href}
                   aria-current={pathname === href ? 'page' : undefined}
-                  className={`flex items-center gap-3.5 rounded-2xl px-4 py-3.5 text-base font-medium transition ${
-                    pathname === href ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground'
-                  }`}
+                  className={`flex items-center gap-3.5 rounded-2xl px-4 py-3.5 text-base font-medium transition ${pathname === href ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground'
+                    }`}
                 >
                   <Icon className="size-5 shrink-0" />
                   {label}
@@ -432,9 +431,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   key={href}
                   href={href}
                   aria-current={active ? 'page' : undefined}
-                  className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all ${
-                    active ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground'
-                  }`}
+                  className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all ${active ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground'
+                    }`}
                 >
                   <Icon className="size-4 shrink-0" />
                   {label}
@@ -596,7 +594,7 @@ function QrImage({ value, size, className }: { value: string; size: number; clas
     let live = true
     import('qrcode').then(({ toDataURL }) =>
       toDataURL(value, { width: size, margin: 1, errorCorrectionLevel: 'M' }).then((data) => { if (live) setSrc(data) })
-    ).catch(() => {})
+    ).catch(() => { })
     return () => { live = false }
   }, [value, size])
   if (src) return <img src={src} alt="" width={size} height={size} className={className} />
@@ -636,6 +634,11 @@ function contrastColor(hex: string): string {
   const b = parseInt(full.slice(4, 6), 16)
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
   return luminance > 0.6 ? '#151515' : '#ffffff'
+}
+
+function accentTextColor(accent: string, dark: boolean): string {
+  if (dark) return contrastColor(accent) === '#ffffff' ? '#f5f5f2' : accent
+  return contrastColor(accent) === '#151515' ? accent : '#151515'
 }
 
 const socialMeta: Record<SocialPlatform, { label: string; placeholder: string; prefix?: string }> = {
@@ -870,7 +873,7 @@ function ProjectsSection({ profile, projects, skin, onTrack, t }: { profile: Pro
   )
 }
 
-export function ProfileCard({ profile, links, projects, preview = false, onTrack }: { profile: Profile; links: LinkItem[]; projects: Project[]; preview?: boolean; onTrack?: CardTrack }) {
+export function ProfileCard({ profile, links, projects, onTrack }: { profile: Profile; links: LinkItem[]; projects: Project[]; onTrack?: CardTrack }) {
   const { t } = useI18n()
   const [copied, setCopied] = useState(false)
   const [showQr, setShowQr] = useState(false)
@@ -881,6 +884,7 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
     : { card: 'border-border bg-card text-foreground', sub: 'text-muted-foreground', bar: 'border-[#e3e3dd]', strip: 'bg-secondary text-muted-foreground', strongText: 'text-foreground' }
   const radius = radiusClass[profile.cardRadius]
   const font = fontClass[profile.fontStyle]
+  const actionColor = accentTextColor(profile.accentColor, dark)
   async function share() {
     await navigator.clipboard?.writeText(`${window.location.host}/${profile.username}`)
     setCopied(true)
@@ -894,7 +898,7 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
     projects: <ProjectsSection key="projects" profile={profile} projects={projects} skin={skin} onTrack={onTrack} t={t} />,
   }
   return (
-    <div className={`pexiloq-fade-in mx-auto max-w-xl ${font} overflow-hidden border ${cardShadow} ${radius} ${skin.card} ${preview ? '' : 'my-8'}`}>
+    <div className={`pexiloq-fade-in mx-auto max-w-xl my-8 ${font} overflow-hidden border ${cardShadow} ${radius} ${skin.card}`}>
       {profile.coverImageURL && (
         <div className="w-full" style={{ height: `${profile.coverImageHeight || 140}px` }}>
           <CardImg
@@ -907,86 +911,86 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
         </div>
       )}
       <div className="p-5">
-      <div className="flex items-center justify-between gap-2">
-        <span className={`inline-flex min-w-0 items-center gap-1.5 truncate rounded-full border px-3 py-1.5 text-[11px] font-medium tracking-tight ${dark ? 'border-white/15 bg-white/5' : 'border-[#e3e3dd] bg-secondary/50'} ${skin.sub}`}>
-          <span className="min-w-0 truncate">{siteHost}/{profile.username}</span>
-        </span>
-        <span className={`flex shrink-0 items-center gap-0.5 rounded-full border p-0.5 ${dark ? 'border-white/15' : 'border-[#e3e3dd]'}`}>
-          <button onClick={() => setShowQr((v) => !v)} aria-label={t('showQr')} aria-pressed={showQr} className={`rounded-full p-2 transition ${showQr ? (dark ? 'bg-white/15' : 'bg-secondary/80') : dark ? 'hover:bg-white/10' : 'hover:bg-secondary/60'}`}>
-            <svg viewBox="0 0 24 24" aria-hidden="true" className="size-3.5"><rect x="3" y="3" width="7" height="7" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" /><rect x="14" y="3" width="7" height="7" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" /><rect x="3" y="14" width="7" height="7" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" /><rect x="14.5" y="14.5" width="2.5" height="2.5" fill="currentColor" /><rect x="18.5" y="14.5" width="2.5" height="2.5" fill="currentColor" /><rect x="14.5" y="18.5" width="2.5" height="2.5" fill="currentColor" /><rect x="18.5" y="18.5" width="2.5" height="2.5" fill="currentColor" /></svg>
-          </button>
-          <span className="relative">
-            <button onClick={share} aria-label={t('shareButton')} className={`rounded-full p-2 transition ${dark ? 'hover:bg-white/10' : 'hover:bg-secondary/60'}`}>
-              {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+        <div className="flex items-center justify-between gap-2">
+          <span className={`inline-flex min-w-0 items-center gap-1.5 truncate rounded-full border px-3 py-1.5 text-[11px] font-medium tracking-tight ${dark ? 'border-white/15 bg-white/5' : 'border-[#e3e3dd] bg-secondary/50'} ${skin.sub}`}>
+            <span className="min-w-0 truncate">{siteHost}/{profile.username}</span>
+          </span>
+          <span className={`flex shrink-0 items-center gap-0.5 rounded-full border p-0.5 ${dark ? 'border-white/15' : 'border-[#e3e3dd]'}`}>
+            <button type="button" onClick={() => setShowQr((v) => !v)} aria-label={t('showQr')} title={t('showQr')} aria-pressed={showQr} className={`rounded-full p-2 transition ${showQr ? (dark ? 'bg-white/15' : 'bg-secondary/80') : dark ? 'hover:bg-white/10' : 'hover:bg-secondary/60'}`}>
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-3.5"><rect x="3" y="3" width="7" height="7" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" /><rect x="14" y="3" width="7" height="7" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" /><rect x="3" y="14" width="7" height="7" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" /><rect x="14.5" y="14.5" width="2.5" height="2.5" fill="currentColor" /><rect x="18.5" y="14.5" width="2.5" height="2.5" fill="currentColor" /><rect x="14.5" y="18.5" width="2.5" height="2.5" fill="currentColor" /><rect x="18.5" y="18.5" width="2.5" height="2.5" fill="currentColor" /></svg>
             </button>
-            {copied && (
-              <span role="status" aria-live="polite" className={`pexiloq-fade-in pointer-events-none absolute right-0 top-full mt-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-medium shadow-sm ${dark ? 'bg-white text-[#151515]' : 'bg-[#151515] text-white'}`}>
-                {t('copied')}
+            <span className="relative">
+              <button type="button" onClick={share} aria-label={t('shareButton')} title={t('shareButton')} className={`rounded-full p-2 transition ${dark ? 'hover:bg-white/10' : 'hover:bg-secondary/60'}`}>
+                {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+              </button>
+              {copied && (
+                <span role="status" aria-live="polite" className={`pexiloq-fade-in pointer-events-none absolute right-0 top-full mt-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-medium shadow-sm ${dark ? 'bg-white text-[#151515]' : 'bg-[#151515] text-white'}`}>
+                  {t('copied')}
+                </span>
+              )}
+            </span>
+          </span>
+        </div>
+        {showQr && (
+          <div className={`mt-4 flex flex-col items-center gap-3 rounded-2xl border pt-5 pb-5 text-center ${dark ? 'border-white/15 bg-white/5' : 'border-[#e3e3dd] bg-secondary/30'}`}>
+            <QrImage value={qrValue} size={148} className="rounded-xl border bg-white p-2" />
+            <button type="button" onClick={() => void downloadQr(qrValue, `${profile.username}-pexiloq-qr.png`)} className="text-xs font-medium underline underline-offset-4" style={{ color: actionColor }}>{t('downloadQr')}</button>
+          </div>
+        )}
+        <div className={`px-2 pb-6 pt-7 text-center sm:px-6 ${showQr ? 'mt-4' : profile.coverImageURL ? '-mt-7' : ''}`}>
+          {profile.showAvatar && (
+            <div
+              className={`mx-auto ${profile.coverImageURL && !showQr ? '-mt-3' : ''} relative grid size-24 place-items-center overflow-hidden text-xl font-medium ${dark ? 'bg-white/10 text-[#f5f5f2]' : 'bg-secondary text-[#151515]'} ${avatarShapeClass[profile.avatarShape]} ${profile.avatarAnimation === 'pulse' ? 'pexiloq-avatar-pulse' : ''} ${profile.avatarAnimation === 'spin' ? 'pexiloq-avatar-spin' : ''} ${profile.avatarAnimation === 'glow' ? 'pexiloq-avatar-glow' : ''}`}
+              style={{
+                // The ring always derives from the profile's own accent color, never a fixed
+                // hue, so it can't clash with a brand-colored avatar. A themed background
+                // ring plus a soft shadow lifts the avatar off a cover photo edge cleanly.
+                ...(profile.avatarRing ? { outline: `3px solid ${profile.accentColor}`, outlineOffset: 2 } : undefined),
+                boxShadow: profile.coverImageURL ? `0 4px 16px rgba(0,0,0,0.18)` : `0 10px 24px -8px rgba(21,21,21,0.18)`,
+                ...(profile.avatarAnimation === 'spin' || profile.avatarAnimation === 'glow' ? ({ '--pexiloq-avatar-ring-color': profile.accentColor } as React.CSSProperties) : undefined),
+              }}
+            >
+              {profile.photoURL ? <CardImg src={profile.photoURL} alt={profile.displayName} className={`size-full ${avatarShapeClass[profile.avatarShape]}`} /> : profile.displayName.slice(0, 2).toUpperCase()}
+            </div>
+          )}
+          <h1 className={`${profile.showAvatar ? 'mt-5' : ''} flex items-center justify-center gap-1.5 text-[1.85rem] font-medium leading-[1.15] tracking-[-0.045em] ${font}`}>
+            <span className="min-w-0 truncate">{profile.displayName}</span>
+            {profile.showVerifiedBadge && (
+              <span aria-label={t('verifiedBadge')} title={t('verifiedBadge')} className="inline-grid size-5 shrink-0 place-items-center rounded-full text-white" style={{ backgroundColor: profile.accentColor }}>
+                <Check className="size-3" strokeWidth={3} />
               </span>
             )}
-          </span>
-        </span>
-      </div>
-      {showQr && !preview && (
-        <div className={`mt-4 flex flex-col items-center gap-3 rounded-2xl border pt-5 pb-5 text-center ${dark ? 'border-white/15 bg-white/5' : 'border-[#e3e3dd] bg-secondary/30'}`}>
-          <QrImage value={qrValue} size={148} className="rounded-xl border bg-white p-2" />
-          <button type="button" onClick={() => void downloadQr(qrValue, `${profile.username}-pexiloq-qr.png`)} className="text-xs underline underline-offset-4" style={{ color: profile.accentColor }}>{t('downloadQr')}</button>
-        </div>
-      )}
-      <div className={`px-2 pb-6 pt-7 text-center sm:px-6 ${profile.coverImageURL ? '-mt-7' : ''}`}>
-        {profile.showAvatar && (
-          <div
-            className={`mx-auto ${profile.coverImageURL ? '-mt-3' : ''} relative grid size-24 place-items-center overflow-hidden text-xl font-medium ${dark ? 'bg-white/10 text-[#f5f5f2]' : 'bg-secondary text-[#151515]'} ${avatarShapeClass[profile.avatarShape]} ${profile.avatarAnimation === 'pulse' ? 'pexiloq-avatar-pulse' : ''} ${profile.avatarAnimation === 'spin' ? 'pexiloq-avatar-spin' : ''} ${profile.avatarAnimation === 'glow' ? 'pexiloq-avatar-glow' : ''}`}
-            style={{
-              // The ring always derives from the profile's own accent color, never a fixed
-              // hue, so it can't clash with a brand-colored avatar. A themed background
-              // ring plus a soft shadow lifts the avatar off a cover photo edge cleanly.
-              ...(profile.avatarRing ? { outline: `3px solid ${profile.accentColor}`, outlineOffset: 2 } : undefined),
-              boxShadow: profile.coverImageURL ? `0 4px 16px rgba(0,0,0,0.18)` : `0 10px 24px -8px rgba(21,21,21,0.18)`,
-              ...(profile.avatarAnimation === 'spin' || profile.avatarAnimation === 'glow' ? ({ '--pexiloq-avatar-ring-color': profile.accentColor } as React.CSSProperties) : undefined),
-            }}
-          >
-            {profile.photoURL ? <CardImg src={profile.photoURL} alt={profile.displayName} className={`size-full ${avatarShapeClass[profile.avatarShape]}`} /> : profile.displayName.slice(0, 2).toUpperCase()}
-          </div>
-        )}
-        <h1 className={`${profile.showAvatar ? 'mt-5' : ''} flex items-center justify-center gap-1.5 text-[1.85rem] font-medium leading-[1.15] tracking-[-0.045em] ${font}`}>
-          <span className="min-w-0 truncate">{profile.displayName}</span>
-          {profile.showVerifiedBadge && (
-            <span aria-label={t('verifiedBadge')} title={t('verifiedBadge')} className="inline-grid size-5 shrink-0 place-items-center rounded-full text-white" style={{ backgroundColor: profile.accentColor }}>
-              <Check className="size-3" strokeWidth={3} />
-            </span>
+          </h1>
+          {profile.headline && <p className={`mt-1.5 text-sm font-medium ${skin.sub}`}>{profile.headline}</p>}
+          {profile.bio && <p className={`mt-4 text-sm leading-6 mx-auto max-w-sm ${skin.sub}`}>{profile.bio}</p>}
+          {profile.website && (
+            <a href={safeHref(profile.website)} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-medium underline decoration-current/30 underline-offset-4 transition hover:decoration-current/70" style={{ color: actionColor }}>
+              {profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+            </a>
           )}
-        </h1>
-        {profile.headline && <p className={`mt-1.5 text-sm font-medium ${skin.sub}`}>{profile.headline}</p>}
-        {profile.bio && <p className={`mt-4 text-sm leading-6 mx-auto max-w-sm ${skin.sub}`}>{profile.bio}</p>}
-        {profile.website && (
-          <a href={safeHref(profile.website)} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-medium underline decoration-current/30 underline-offset-4 transition hover:decoration-current/70" style={{ color: profile.accentColor }}>
-            {profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
-          </a>
-        )}
-        {Object.entries(profile.socials || {}).filter(([, v]) => v).length > 0 && (
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-            {socialPlatforms.filter((p) => profile.socials?.[p]).map((p) => {
-              const value = profile.socials![p]!
-              const href = socialHref(p, value, profile.twitterIcon)
-              return <a key={p} href={href} target="_blank" rel="noreferrer" aria-label={socialMeta[p].label} onClick={() => onTrack?.('socials', p)} className={`grid size-9 place-items-center rounded-full transition duration-200 hover:-translate-y-0.5 hover:shadow-sm focus-visible:-translate-y-0.5 active:translate-y-0 ${socialFilled ? '' : `border ${skin.bar}`}`} style={socialFilled ? { backgroundColor: profile.accentColor, color: '#ffffff' } : undefined}><SocialGlyph platform={p} twitterIcon={profile.twitterIcon} className="size-4" /></a>
-            })}
+          {Object.entries(profile.socials || {}).filter(([, v]) => v).length > 0 && (
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+              {socialPlatforms.filter((p) => profile.socials?.[p]).map((p) => {
+                const value = profile.socials![p]!
+                const href = socialHref(p, value, profile.twitterIcon)
+                return <a key={p} href={href} target="_blank" rel="noreferrer" aria-label={socialMeta[p].label} onClick={() => onTrack?.('socials', p)} className={`grid size-9 place-items-center rounded-full transition duration-200 hover:-translate-y-0.5 hover:shadow-sm focus-visible:-translate-y-0.5 active:translate-y-0 ${socialFilled ? '' : `border ${skin.bar}`}`} style={socialFilled ? { backgroundColor: profile.accentColor, color: '#ffffff' } : undefined}><SocialGlyph platform={p} twitterIcon={profile.twitterIcon} className="size-4" /></a>
+              })}
+            </div>
+          )}
+        </div>
+        {sectionOrder.map((key) => <div key={key}>{sections[key]}</div>)}
+        {profile.showBadge && (
+          <div className={`mt-2 flex justify-center border-t pt-4 ${skin.bar}`}>
+            <a
+              href={siteUrl}
+              target="_blank"
+              rel="noreferrer"
+              className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-[10px] transition hover:-translate-y-0.5 ${dark ? 'bg-white/10 hover:bg-white/15' : 'bg-secondary/70 hover:bg-secondary'} ${skin.sub}`}
+            >
+              {t('made')} <span className={`font-semibold ${dark ? 'text-[#f5f5f2]' : 'text-[#151515]'}`}>pexiloq</span>
+            </a>
           </div>
         )}
-      </div>
-      {sectionOrder.map((key) => <div key={key}>{sections[key]}</div>)}
-      {profile.showBadge && (
-        <div className={`mt-2 flex justify-center border-t pt-4 ${skin.bar}`}>
-          <a
-            href="https://pexiloq.com"
-            target="_blank"
-            rel="noreferrer"
-            className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-[10px] transition hover:-translate-y-0.5 ${dark ? 'bg-white/10 hover:bg-white/15' : 'bg-secondary/70 hover:bg-secondary'} ${skin.sub}`}
-          >
-            {t('made')} <span className={`font-semibold ${dark ? 'text-[#f5f5f2]' : 'text-[#151515]'}`}>pexiloq</span>
-          </a>
-        </div>
-      )}
       </div>
     </div>
   )
@@ -1371,121 +1375,121 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
       )}
       {kind === 'links' && (
         <div className="grid gap-8 lg:grid-cols-[1fr_0.75fr] lg:items-start">
-        <div className="space-y-3">
-          {draftLinks.length === 0 && (
-            <div className="rounded-2xl border border-dashed bg-card/50 px-6 py-10 text-center">
-              <Link2 className="mx-auto size-6 text-muted-foreground" />
-              <p className="mt-3 text-sm font-medium">{t('noLinksYet')}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{t('noLinksYetHint')}</p>
-            </div>
-          )}
-          {draftLinks.map((item, index) => (
-            <div
-              key={item.id}
-              draggable
-              onDragStart={() => setDragIndex(index)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => reorder(draftLinks, setDraftLinks, index)}
-              onDragEnd={() => setDragIndex(null)}
-              className={`flex flex-col gap-3 rounded-2xl border bg-card p-4 transition sm:flex-row sm:items-center ${dragIndex === index ? 'opacity-50' : ''}`}
-            >
-              <span className="hidden cursor-grab select-none text-muted-foreground active:cursor-grabbing sm:block" title={t('dragToReorder')}><GripVertical className="size-4" /></span>
-              <button className="text-muted-foreground transition hover:text-destructive" onClick={() => { void deleteStoredImage(uid, item.imageURL); setDraftLinks(draftLinks.filter((x) => x.id !== item.id)) }} aria-label={t('deleteLink')}><Trash2 className="size-4" /></button>
-              {faviconFor(item.url) && <img src={faviconFor(item.url)} alt="" className="hidden size-5 rounded-sm sm:block" />}
-              <div className="grid flex-1 gap-2">
-                <div className="grid gap-2 md:grid-cols-2">
-                  <input value={item.title} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, title: e.target.value } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('linkTitle')} />
-                  <input value={item.url} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, url: e.target.value } : x))} className={`rounded-lg border bg-background px-3 py-2 text-sm ${!isSafeWebUrl(item.url) ? 'border-destructive/60' : ''}`} placeholder="https://" />
-                </div>
-                {!isSafeWebUrl(item.url) && <p className="flex items-center gap-1.5 text-xs text-destructive"><CircleAlert className="size-3.5 shrink-0" />{t('invalidUrl')}</p>}
-                <input value={item.subtitle || ''} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, subtitle: e.target.value } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('linkSubtitlePlaceholder')} aria-label={t('linkSubtitle')} />
-                <div className="flex items-center gap-2">
-                  <input value={item.icon || ''} maxLength={4} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, icon: e.target.value.trim() } : x))} className="w-14 rounded-lg border bg-background px-2 py-2 text-center text-lg" placeholder={t('emoji')} aria-label={t('emoji')} />
-                  <div className="flex gap-0.5 overflow-x-auto">{linkEmojis.map((emoji) => <button key={emoji} type="button" onClick={() => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, icon: x.icon === emoji ? '' : emoji } : x))} aria-pressed={item.icon === emoji} className={`shrink-0 rounded-md p-1 text-base transition ${item.icon === emoji ? 'bg-secondary' : 'hover:bg-secondary/60'}`}>{emoji}</button>)}</div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 border-t pt-2">
-                  <span className="text-xs text-muted-foreground">{t('linkDisplayStyle')}</span>
-                  {linkDisplayStyles.map((style) => (
-                    <button key={style} type="button" onClick={() => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, displayStyle: style } : x))} aria-pressed={(item.displayStyle || 'default') === style} className={`rounded-full border px-3 py-1 text-xs capitalize transition ${(item.displayStyle || 'default') === style ? 'border-foreground bg-secondary font-medium' : 'hover:border-foreground/40'}`}>{t(`linkStyle${style.charAt(0).toUpperCase()}${style.slice(1)}`)}</button>
-                  ))}
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-xs text-muted-foreground">{t('linkScheduling')}</span>
-                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>{t('visibleFrom')}</span>
-                    <input type="date" value={item.visibleFrom || ''} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, visibleFrom: e.target.value || undefined } : x))} className="rounded-lg border bg-background px-2 py-1.5 text-xs" />
-                  </label>
-                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>{t('visibleUntil')}</span>
-                    <input type="date" value={item.visibleUntil || ''} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, visibleUntil: e.target.value || undefined } : x))} className="rounded-lg border bg-background px-2 py-1.5 text-xs" />
-                  </label>
-                  {(item.visibleFrom || item.visibleUntil) && <button type="button" onClick={() => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, visibleFrom: undefined, visibleUntil: undefined } : x))} className="text-xs text-muted-foreground underline underline-offset-4">{t('clear')}</button>}
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <label className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs text-muted-foreground">
-                    <input type="color" value={item.bgColor || '#ffffff'} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, bgColor: e.target.value } : x))} className="size-4 cursor-pointer appearance-none rounded-full border border-border p-0" aria-label={t('linkBgColor')} />
-                    <span>{t('linkBgColor')}</span>
-                  </label>
-                  {item.bgColor && <button type="button" onClick={() => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, bgColor: '' } : x))} className="text-xs text-muted-foreground underline underline-offset-4">{t('bgDefault')}</button>}
-                  <label className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs text-muted-foreground">
-                    <input type="color" value={item.iconColor || '#171717'} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, iconColor: e.target.value } : x))} className="size-4 cursor-pointer appearance-none rounded-full border border-border p-0" aria-label={t('linkIconColor')} />
-                    <span>{t('linkIconColor')}</span>
-                  </label>
-                  {item.iconColor && <button type="button" onClick={() => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, iconColor: '' } : x))} className="text-xs text-muted-foreground underline underline-offset-4">{t('bgDefault')}</button>}
-                </div>
-                {item.displayStyle === 'thumbnail' && (
-                  <div className="grid gap-2 border-t pt-2 md:grid-cols-2">
-                    <input value={item.imageURL || ''} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, imageURL: e.target.value.trim() } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('linkThumbnailUrl')} />
-                    <ImageUploader uid={uid} maxDimension={512} value={item.imageURL} shape="rect" aspect={1} onUploaded={(url) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, imageURL: url } : x))} />
-                  </div>
-                )}
+          <div className="space-y-3">
+            {draftLinks.length === 0 && (
+              <div className="rounded-2xl border border-dashed bg-card/50 px-6 py-10 text-center">
+                <Link2 className="mx-auto size-6 text-muted-foreground" />
+                <p className="mt-3 text-sm font-medium">{t('noLinksYet')}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{t('noLinksYetHint')}</p>
               </div>
-              <button onClick={() => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, visible: !x.visible } : x))} className={`rounded-full px-3 py-1 text-xs transition ${item.visible ? 'bg-secondary font-medium' : 'border text-muted-foreground'}`}>{item.visible ? t('visible') : t('hidden')}</button>
-            </div>
-          ))}
-          <button onClick={addLink} className="rounded-full border px-4 py-2 text-sm transition hover:border-foreground/40"><Plus className="mr-1 inline size-4" />{t('addLink')}</button>
-        </div>
-        <div className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:self-start"><LivePreview profile={draftProfile} links={draftLinks} projects={draftProjects} /></div>
+            )}
+            {draftLinks.map((item, index) => (
+              <div
+                key={item.id}
+                draggable
+                onDragStart={() => setDragIndex(index)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => reorder(draftLinks, setDraftLinks, index)}
+                onDragEnd={() => setDragIndex(null)}
+                className={`flex flex-col gap-3 rounded-2xl border bg-card p-4 transition sm:flex-row sm:items-center ${dragIndex === index ? 'opacity-50' : ''}`}
+              >
+                <span className="hidden cursor-grab select-none text-muted-foreground active:cursor-grabbing sm:block" title={t('dragToReorder')}><GripVertical className="size-4" /></span>
+                <button className="text-muted-foreground transition hover:text-destructive" onClick={() => { void deleteStoredImage(uid, item.imageURL); setDraftLinks(draftLinks.filter((x) => x.id !== item.id)) }} aria-label={t('deleteLink')}><Trash2 className="size-4" /></button>
+                {faviconFor(item.url) && <img src={faviconFor(item.url)} alt="" className="hidden size-5 rounded-sm sm:block" />}
+                <div className="grid flex-1 gap-2">
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <input value={item.title} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, title: e.target.value } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('linkTitle')} />
+                    <input value={item.url} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, url: e.target.value } : x))} className={`rounded-lg border bg-background px-3 py-2 text-sm ${!isSafeWebUrl(item.url) ? 'border-destructive/60' : ''}`} placeholder="https://" />
+                  </div>
+                  {!isSafeWebUrl(item.url) && <p className="flex items-center gap-1.5 text-xs text-destructive"><CircleAlert className="size-3.5 shrink-0" />{t('invalidUrl')}</p>}
+                  <input value={item.subtitle || ''} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, subtitle: e.target.value } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('linkSubtitlePlaceholder')} aria-label={t('linkSubtitle')} />
+                  <div className="flex items-center gap-2">
+                    <input value={item.icon || ''} maxLength={4} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, icon: e.target.value.trim() } : x))} className="w-14 rounded-lg border bg-background px-2 py-2 text-center text-lg" placeholder={t('emoji')} aria-label={t('emoji')} />
+                    <div className="flex gap-0.5 overflow-x-auto">{linkEmojis.map((emoji) => <button key={emoji} type="button" onClick={() => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, icon: x.icon === emoji ? '' : emoji } : x))} aria-pressed={item.icon === emoji} className={`shrink-0 rounded-md p-1 text-base transition ${item.icon === emoji ? 'bg-secondary' : 'hover:bg-secondary/60'}`}>{emoji}</button>)}</div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 border-t pt-2">
+                    <span className="text-xs text-muted-foreground">{t('linkDisplayStyle')}</span>
+                    {linkDisplayStyles.map((style) => (
+                      <button key={style} type="button" onClick={() => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, displayStyle: style } : x))} aria-pressed={(item.displayStyle || 'default') === style} className={`rounded-full border px-3 py-1 text-xs capitalize transition ${(item.displayStyle || 'default') === style ? 'border-foreground bg-secondary font-medium' : 'hover:border-foreground/40'}`}>{t(`linkStyle${style.charAt(0).toUpperCase()}${style.slice(1)}`)}</button>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-xs text-muted-foreground">{t('linkScheduling')}</span>
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{t('visibleFrom')}</span>
+                      <input type="date" value={item.visibleFrom || ''} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, visibleFrom: e.target.value || undefined } : x))} className="rounded-lg border bg-background px-2 py-1.5 text-xs" />
+                    </label>
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{t('visibleUntil')}</span>
+                      <input type="date" value={item.visibleUntil || ''} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, visibleUntil: e.target.value || undefined } : x))} className="rounded-lg border bg-background px-2 py-1.5 text-xs" />
+                    </label>
+                    {(item.visibleFrom || item.visibleUntil) && <button type="button" onClick={() => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, visibleFrom: undefined, visibleUntil: undefined } : x))} className="text-xs text-muted-foreground underline underline-offset-4">{t('clear')}</button>}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs text-muted-foreground">
+                      <input type="color" value={item.bgColor || '#ffffff'} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, bgColor: e.target.value } : x))} className="size-4 cursor-pointer appearance-none rounded-full border border-border p-0" aria-label={t('linkBgColor')} />
+                      <span>{t('linkBgColor')}</span>
+                    </label>
+                    {item.bgColor && <button type="button" onClick={() => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, bgColor: '' } : x))} className="text-xs text-muted-foreground underline underline-offset-4">{t('bgDefault')}</button>}
+                    <label className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs text-muted-foreground">
+                      <input type="color" value={item.iconColor || '#171717'} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, iconColor: e.target.value } : x))} className="size-4 cursor-pointer appearance-none rounded-full border border-border p-0" aria-label={t('linkIconColor')} />
+                      <span>{t('linkIconColor')}</span>
+                    </label>
+                    {item.iconColor && <button type="button" onClick={() => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, iconColor: '' } : x))} className="text-xs text-muted-foreground underline underline-offset-4">{t('bgDefault')}</button>}
+                  </div>
+                  {item.displayStyle === 'thumbnail' && (
+                    <div className="grid gap-2 border-t pt-2 md:grid-cols-2">
+                      <input value={item.imageURL || ''} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, imageURL: e.target.value.trim() } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('linkThumbnailUrl')} />
+                      <ImageUploader uid={uid} maxDimension={512} value={item.imageURL} shape="rect" aspect={1} onUploaded={(url) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, imageURL: url } : x))} />
+                    </div>
+                  )}
+                </div>
+                <button onClick={() => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, visible: !x.visible } : x))} className={`rounded-full px-3 py-1 text-xs transition ${item.visible ? 'bg-secondary font-medium' : 'border text-muted-foreground'}`}>{item.visible ? t('visible') : t('hidden')}</button>
+              </div>
+            ))}
+            <button onClick={addLink} className="rounded-full border px-4 py-2 text-sm transition hover:border-foreground/40"><Plus className="mr-1 inline size-4" />{t('addLink')}</button>
+          </div>
+          <div className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:self-start"><LivePreview profile={draftProfile} links={draftLinks} projects={draftProjects} /></div>
         </div>
       )}
       {kind === 'projects' && (
         <div className="grid gap-8 lg:grid-cols-[1fr_0.75fr] lg:items-start">
-        <div className="space-y-3">
-          {draftProjects.length === 0 && (
-            <div className="rounded-2xl border border-dashed bg-card/50 px-6 py-10 text-center">
-              <Layers className="mx-auto size-6 text-muted-foreground" />
-              <p className="mt-3 text-sm font-medium">{t('noProjectsYet')}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{t('noProjectsYetHint')}</p>
-            </div>
-          )}
-          {draftProjects.map((item, index) => (
-            <div
-              key={item.id}
-              draggable
-              onDragStart={() => setDragIndex(index)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => reorder(draftProjects, setDraftProjects, index)}
-              onDragEnd={() => setDragIndex(null)}
-              className={`rounded-2xl border bg-card p-5 transition ${dragIndex === index ? 'opacity-50' : ''}`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-2 text-sm font-medium"><span className="cursor-grab select-none text-muted-foreground active:cursor-grabbing" title={t('dragToReorder')}><GripVertical className="size-4" /></span>{t('project')}</span>
-                <button onClick={() => { void deleteStoredImage(uid, item.imageURL); setDraftProjects(draftProjects.filter((x) => x.id !== item.id)) }} aria-label={t('deleteProject')} className="text-muted-foreground transition hover:text-destructive"><Trash2 className="size-4" /></button>
+          <div className="space-y-3">
+            {draftProjects.length === 0 && (
+              <div className="rounded-2xl border border-dashed bg-card/50 px-6 py-10 text-center">
+                <Layers className="mx-auto size-6 text-muted-foreground" />
+                <p className="mt-3 text-sm font-medium">{t('noProjectsYet')}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{t('noProjectsYetHint')}</p>
               </div>
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <input value={item.title} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, title: e.target.value } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('projectTitle')} />
-                <input value={item.url} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, url: e.target.value } : x))} className={`rounded-lg border bg-background px-3 py-2 text-sm ${!isSafeWebUrl(item.url) ? 'border-destructive/60' : ''}`} placeholder={t('projectUrl')} />
-                {!isSafeWebUrl(item.url) && <p className="flex items-center gap-1.5 text-xs text-destructive md:col-span-2"><CircleAlert className="size-3.5 shrink-0" />{t('invalidUrl')}</p>}
-                <textarea value={item.description} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, description: e.target.value } : x))} className="min-h-24 rounded-lg border bg-background px-3 py-2 text-sm md:col-span-2" placeholder={t('description')} />
-                <input value={(item.technologies || []).join(', ')} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, technologies: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm md:col-span-2" placeholder={t('technologiesHint')} aria-label={t('technologies')} />
-                <input value={item.imageURL || ''} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, imageURL: e.target.value.trim() } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm md:col-span-2" placeholder="Image URL (optional) — https://" />
-                <ImageUploader uid={uid} maxDimension={1024} value={item.imageURL} shape="rect" aspect={16 / 9} onUploaded={(url) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, imageURL: url } : x))} className="md:col-span-2" />
+            )}
+            {draftProjects.map((item, index) => (
+              <div
+                key={item.id}
+                draggable
+                onDragStart={() => setDragIndex(index)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => reorder(draftProjects, setDraftProjects, index)}
+                onDragEnd={() => setDragIndex(null)}
+                className={`rounded-2xl border bg-card p-5 transition ${dragIndex === index ? 'opacity-50' : ''}`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2 text-sm font-medium"><span className="cursor-grab select-none text-muted-foreground active:cursor-grabbing" title={t('dragToReorder')}><GripVertical className="size-4" /></span>{t('project')}</span>
+                  <button onClick={() => { void deleteStoredImage(uid, item.imageURL); setDraftProjects(draftProjects.filter((x) => x.id !== item.id)) }} aria-label={t('deleteProject')} className="text-muted-foreground transition hover:text-destructive"><Trash2 className="size-4" /></button>
+                </div>
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <input value={item.title} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, title: e.target.value } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('projectTitle')} />
+                  <input value={item.url} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, url: e.target.value } : x))} className={`rounded-lg border bg-background px-3 py-2 text-sm ${!isSafeWebUrl(item.url) ? 'border-destructive/60' : ''}`} placeholder={t('projectUrl')} />
+                  {!isSafeWebUrl(item.url) && <p className="flex items-center gap-1.5 text-xs text-destructive md:col-span-2"><CircleAlert className="size-3.5 shrink-0" />{t('invalidUrl')}</p>}
+                  <textarea value={item.description} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, description: e.target.value } : x))} className="min-h-24 rounded-lg border bg-background px-3 py-2 text-sm md:col-span-2" placeholder={t('description')} />
+                  <input value={(item.technologies || []).join(', ')} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, technologies: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm md:col-span-2" placeholder={t('technologiesHint')} aria-label={t('technologies')} />
+                  <input value={item.imageURL || ''} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, imageURL: e.target.value.trim() } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm md:col-span-2" placeholder="Image URL (optional) — https://" />
+                  <ImageUploader uid={uid} maxDimension={1024} value={item.imageURL} shape="rect" aspect={16 / 9} onUploaded={(url) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, imageURL: url } : x))} className="md:col-span-2" />
+                </div>
               </div>
-            </div>
-          ))}
-          <button onClick={addProject} className="rounded-full border px-4 py-2 text-sm transition hover:border-foreground/40"><Plus className="mr-1 inline size-4" />{t('addProject')}</button>
-        </div>
-        <div className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:self-start"><LivePreview profile={draftProfile} links={draftLinks} projects={draftProjects} /></div>
+            ))}
+            <button onClick={addProject} className="rounded-full border px-4 py-2 text-sm transition hover:border-foreground/40"><Plus className="mr-1 inline size-4" />{t('addProject')}</button>
+          </div>
+          <div className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:self-start"><LivePreview profile={draftProfile} links={draftLinks} projects={draftProjects} /></div>
         </div>
       )}
     </>
@@ -1825,88 +1829,88 @@ function Onboarding() {
         <div key={s.label} className={`flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition ${i === step ? 'border-foreground bg-secondary font-medium' : i < step ? 'text-muted-foreground' : 'border-transparent text-muted-foreground/60'}`}><span className={`grid size-4 place-items-center rounded-full text-[10px] ${i < step ? 'bg-foreground text-background' : i === step ? 'bg-foreground/15' : ''}`}>{i < step ? <Check className="size-3" /> : i + 1}</span>{s.label}</div>
       ))}</div>
       <div className={`mt-6 grid gap-6 ${isLast ? '' : 'lg:grid-cols-[1fr_0.75fr]'}`}>
-      <div className="rounded-2xl border bg-card p-6">
-        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{steps[step].label}</p>
-        <p className="mt-2 text-sm text-muted-foreground">{steps[step].hint}</p>
-        {step === 0 && (
-          <div className="mt-6 space-y-4">
-            <Field label={t('displayName')} value={draft.displayName} onChange={(v) => setField({ displayName: v })} />
-            <Field label={t('username')} value={draft.username} prefix={`${siteHost}/`} onChange={(v) => setField({ username: v.toLowerCase().replace(/[^a-z0-9-]/g, '') })} note={<UsernameNote status={usernameStatus} />} invalid={usernameStatus === 'taken' || usernameStatus === 'short'} />
-            <Field label={t('headline')} value={draft.headline} onChange={(v) => setField({ headline: v })} />
-          </div>
-        )}
-        {step === 1 && (
-          <div className="mt-6 space-y-4">
-            <Field label={t('bio')} value={draft.bio} onChange={(v) => setField({ bio: v })} area />
-            <Field label={t('website')} value={draft.website} onChange={(v) => setField({ website: v })} />
-            <div className="block text-sm">
-              <span>{t('profilePhoto')}</span>
-              <div className="mt-2 flex items-center gap-4">
-                <div className="relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary text-sm font-medium">
-                  {draft.photoURL ? <CardImg src={draft.photoURL} alt="" className="size-full rounded-full" /> : (draft.displayName || '?').slice(0, 2).toUpperCase()}
-                </div>
-                <div className="grid flex-1 gap-2">
-                  <ImageUploader uid={uid} maxDimension={512} value={draft.photoURL} shape="circle" aspect={1} onUploaded={(url) => setField({ photoURL: url })} />
-                  <details className="text-xs text-muted-foreground">
-                    <summary className="cursor-pointer select-none">{t('orPasteUrl')}</summary>
-                    <input value={draft.photoURL || ''} onChange={(e) => setField({ photoURL: e.target.value.trim() })} className="mt-2 w-full rounded-lg border bg-background px-3 py-2 text-sm" placeholder="https://…" />
-                  </details>
-                </div>
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">{t('photoFitHint')}</p>
+        <div className="rounded-2xl border bg-card p-6">
+          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{steps[step].label}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{steps[step].hint}</p>
+          {step === 0 && (
+            <div className="mt-6 space-y-4">
+              <Field label={t('displayName')} value={draft.displayName} onChange={(v) => setField({ displayName: v })} />
+              <Field label={t('username')} value={draft.username} prefix={`${siteHost}/`} onChange={(v) => setField({ username: v.toLowerCase().replace(/[^a-z0-9-]/g, '') })} note={<UsernameNote status={usernameStatus} />} invalid={usernameStatus === 'taken' || usernameStatus === 'short'} />
+              <Field label={t('headline')} value={draft.headline} onChange={(v) => setField({ headline: v })} />
             </div>
-          </div>
-        )}
-        {step === 2 && (
-          <div className="mt-6 space-y-3">
-            {draftLinks.map((item) => (
-              <div key={item.id} className="flex flex-col gap-3 rounded-xl border bg-background p-4 sm:flex-row sm:items-center">
-                <button className="text-muted-foreground transition hover:text-destructive" onClick={() => { void deleteStoredImage(uid, item.imageURL); setDraftLinks(draftLinks.filter((x) => x.id !== item.id)) }} aria-label={t('deleteLink')}><Trash2 className="size-4" /></button>
-                <input value={item.title} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, title: e.target.value } : x))} className="min-w-0 flex-1 rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('linkTitle')} />
-                <input value={item.url} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, url: e.target.value } : x))} className="min-w-0 flex-1 rounded-lg border bg-background px-3 py-2 text-sm" placeholder="https://" />
-                <button onClick={() => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, visible: !x.visible } : x))} className={`rounded-full px-3 py-1 text-xs transition ${item.visible ? 'bg-secondary font-medium' : 'border text-muted-foreground'}`}>{item.visible ? t('visible') : t('hidden')}</button>
-              </div>
-            ))}
-            <button onClick={() => setDraftLinks([...draftLinks, { id: crypto.randomUUID(), title: '', url: 'https://', visible: true }])} className="rounded-full border px-4 py-2 text-sm transition hover:border-foreground/40"><Plus className="mr-1 inline size-4" />{t('addLink')}</button>
-          </div>
-        )}
-        {step === 3 && (
-          <div className="mt-6 space-y-3">
-            {draftProjects.map((item) => (
-              <div key={item.id} className="rounded-xl border bg-background p-4">
-                <div className="flex justify-between">
-                  <p className="text-sm font-medium">{t('project')}</p>
-                  <button onClick={() => { void deleteStoredImage(uid, item.imageURL); setDraftProjects(draftProjects.filter((x) => x.id !== item.id)) }} aria-label={t('deleteProject')} className="text-muted-foreground transition hover:text-destructive"><Trash2 className="size-4" /></button>
+          )}
+          {step === 1 && (
+            <div className="mt-6 space-y-4">
+              <Field label={t('bio')} value={draft.bio} onChange={(v) => setField({ bio: v })} area />
+              <Field label={t('website')} value={draft.website} onChange={(v) => setField({ website: v })} />
+              <div className="block text-sm">
+                <span>{t('profilePhoto')}</span>
+                <div className="mt-2 flex items-center gap-4">
+                  <div className="relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary text-sm font-medium">
+                    {draft.photoURL ? <CardImg src={draft.photoURL} alt="" className="size-full rounded-full" /> : (draft.displayName || '?').slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="grid flex-1 gap-2">
+                    <ImageUploader uid={uid} maxDimension={512} value={draft.photoURL} shape="circle" aspect={1} onUploaded={(url) => setField({ photoURL: url })} />
+                    <details className="text-xs text-muted-foreground">
+                      <summary className="cursor-pointer select-none">{t('orPasteUrl')}</summary>
+                      <input value={draft.photoURL || ''} onChange={(e) => setField({ photoURL: e.target.value.trim() })} className="mt-2 w-full rounded-lg border bg-background px-3 py-2 text-sm" placeholder="https://…" />
+                    </details>
+                  </div>
                 </div>
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
-                  <input value={item.title} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, title: e.target.value } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('projectTitle')} />
-                  <input value={item.url} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, url: e.target.value } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('projectUrl')} />
-                  <textarea value={item.description} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, description: e.target.value } : x))} className="min-h-20 rounded-lg border bg-background px-3 py-2 text-sm md:col-span-2" placeholder={t('description')} />
-                </div>
+                <p className="mt-2 text-xs text-muted-foreground">{t('photoFitHint')}</p>
               </div>
-            ))}
-            <button onClick={() => setDraftProjects([...draftProjects, { id: crypto.randomUUID(), title: '', description: '', url: 'https://', imageURL: '', technologies: [], visible: true }])} className="rounded-full border px-4 py-2 text-sm transition hover:border-foreground/40"><Plus className="mr-1 inline size-4" />{t('addProject')}</button>
-          </div>
-        )}
-        {step === 4 && <div className="mt-6"><AppearanceControls draft={draft} onChange={setDraft} uid={uid} /></div>}
-        {step === 5 && (
-          <div className="mt-6">
-            <div className="grid gap-3 md:grid-cols-2">
-              <button onClick={() => setField({ isPublic: true })} className={`rounded-2xl border p-5 text-left transition ${draft.isPublic === false ? 'hover:border-foreground/40' : 'border-foreground bg-secondary'}`}><p className="text-sm font-medium">{t('publicProfile')}</p><p className="mt-2 text-xs leading-5 text-muted-foreground">{t('publicProfileText')}</p></button>
-              <button onClick={() => setField({ isPublic: false })} className={`rounded-2xl border p-5 text-left transition ${draft.isPublic === false ? 'border-foreground bg-secondary' : 'hover:border-foreground/40'}`}><p className="text-sm font-medium">{t('privateProfile')}</p><p className="mt-2 text-xs leading-5 text-muted-foreground">{t('privateProfileText')}</p></button>
             </div>
-            <div className="mt-8 border-t pt-6"><LivePreview profile={draft} links={draftLinks.filter((i) => i.visible)} projects={draftProjects.filter((i) => i.visible)} /></div>
+          )}
+          {step === 2 && (
+            <div className="mt-6 space-y-3">
+              {draftLinks.map((item) => (
+                <div key={item.id} className="flex flex-col gap-3 rounded-xl border bg-background p-4 sm:flex-row sm:items-center">
+                  <button className="text-muted-foreground transition hover:text-destructive" onClick={() => { void deleteStoredImage(uid, item.imageURL); setDraftLinks(draftLinks.filter((x) => x.id !== item.id)) }} aria-label={t('deleteLink')}><Trash2 className="size-4" /></button>
+                  <input value={item.title} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, title: e.target.value } : x))} className="min-w-0 flex-1 rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('linkTitle')} />
+                  <input value={item.url} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, url: e.target.value } : x))} className="min-w-0 flex-1 rounded-lg border bg-background px-3 py-2 text-sm" placeholder="https://" />
+                  <button onClick={() => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, visible: !x.visible } : x))} className={`rounded-full px-3 py-1 text-xs transition ${item.visible ? 'bg-secondary font-medium' : 'border text-muted-foreground'}`}>{item.visible ? t('visible') : t('hidden')}</button>
+                </div>
+              ))}
+              <button onClick={() => setDraftLinks([...draftLinks, { id: crypto.randomUUID(), title: '', url: 'https://', visible: true }])} className="rounded-full border px-4 py-2 text-sm transition hover:border-foreground/40"><Plus className="mr-1 inline size-4" />{t('addLink')}</button>
+            </div>
+          )}
+          {step === 3 && (
+            <div className="mt-6 space-y-3">
+              {draftProjects.map((item) => (
+                <div key={item.id} className="rounded-xl border bg-background p-4">
+                  <div className="flex justify-between">
+                    <p className="text-sm font-medium">{t('project')}</p>
+                    <button onClick={() => { void deleteStoredImage(uid, item.imageURL); setDraftProjects(draftProjects.filter((x) => x.id !== item.id)) }} aria-label={t('deleteProject')} className="text-muted-foreground transition hover:text-destructive"><Trash2 className="size-4" /></button>
+                  </div>
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <input value={item.title} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, title: e.target.value } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('projectTitle')} />
+                    <input value={item.url} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, url: e.target.value } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('projectUrl')} />
+                    <textarea value={item.description} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, description: e.target.value } : x))} className="min-h-20 rounded-lg border bg-background px-3 py-2 text-sm md:col-span-2" placeholder={t('description')} />
+                  </div>
+                </div>
+              ))}
+              <button onClick={() => setDraftProjects([...draftProjects, { id: crypto.randomUUID(), title: '', description: '', url: 'https://', imageURL: '', technologies: [], visible: true }])} className="rounded-full border px-4 py-2 text-sm transition hover:border-foreground/40"><Plus className="mr-1 inline size-4" />{t('addProject')}</button>
+            </div>
+          )}
+          {step === 4 && <div className="mt-6"><AppearanceControls draft={draft} onChange={setDraft} uid={uid} /></div>}
+          {step === 5 && (
+            <div className="mt-6">
+              <div className="grid gap-3 md:grid-cols-2">
+                <button onClick={() => setField({ isPublic: true })} className={`rounded-2xl border p-5 text-left transition ${draft.isPublic === false ? 'hover:border-foreground/40' : 'border-foreground bg-secondary'}`}><p className="text-sm font-medium">{t('publicProfile')}</p><p className="mt-2 text-xs leading-5 text-muted-foreground">{t('publicProfileText')}</p></button>
+                <button onClick={() => setField({ isPublic: false })} className={`rounded-2xl border p-5 text-left transition ${draft.isPublic === false ? 'border-foreground bg-secondary' : 'hover:border-foreground/40'}`}><p className="text-sm font-medium">{t('privateProfile')}</p><p className="mt-2 text-xs leading-5 text-muted-foreground">{t('privateProfileText')}</p></button>
+              </div>
+              <div className="mt-8 border-t pt-6"><LivePreview profile={draft} links={draftLinks.filter((i) => i.visible)} projects={draftProjects.filter((i) => i.visible)} /></div>
+            </div>
+          )}
+          {finishError && <p role="alert" className="mt-6 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">{finishError}</p>}
+          <div className="mt-8 flex items-center justify-between">
+            <button onClick={() => setStep((s) => Math.max(s - 1, 0))} disabled={step === 0} className="rounded-full border px-5 py-3 text-sm transition hover:border-foreground/40 disabled:opacity-40">{t('stepBack')}</button>
+            {isLast ? <button onClick={finish} disabled={busy || usernameBlocksFinish} className="flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground disabled:opacity-50">{busy ? <Loader2 className="size-4 animate-spin" /> : t('stepLaunch')}<ArrowUpRight className="size-4" /></button> : <button onClick={() => setStep((s) => Math.min(s + 1, steps.length - 1))} className="flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground">{t('stepNext')}<ArrowUpRight className="size-4" /></button>}
           </div>
-        )}
-        {finishError && <p role="alert" className="mt-6 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">{finishError}</p>}
-        <div className="mt-8 flex items-center justify-between">
-          <button onClick={() => setStep((s) => Math.max(s - 1, 0))} disabled={step === 0} className="rounded-full border px-5 py-3 text-sm transition hover:border-foreground/40 disabled:opacity-40">{t('stepBack')}</button>
-          {isLast ? <button onClick={finish} disabled={busy || usernameBlocksFinish} className="flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground disabled:opacity-50">{busy ? <Loader2 className="size-4 animate-spin" /> : t('stepLaunch')}<ArrowUpRight className="size-4" /></button> : <button onClick={() => setStep((s) => Math.min(s + 1, steps.length - 1))} className="flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground">{t('stepNext')}<ArrowUpRight className="size-4" /></button>}
         </div>
-      </div>
-      {/* A live preview beside every step (not just the final privacy step) means the person
+        {/* A live preview beside every step (not just the final privacy step) means the person
          sees their page take shape as they type, instead of filling out forms blind until the end. */}
-      {!isLast && <div className="hidden lg:block lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:self-start"><LivePreview profile={draft} links={draftLinks.filter((i) => i.visible)} projects={draftProjects.filter((i) => i.visible)} /></div>}
+        {!isLast && <div className="hidden lg:block lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:self-start"><LivePreview profile={draft} links={draftLinks.filter((i) => i.visible)} projects={draftProjects.filter((i) => i.visible)} /></div>}
       </div>
     </div>
   )
@@ -2369,7 +2373,7 @@ export function PhonePreviewFrame({ profile, children }: { profile: Profile; chi
           <div className="pexiloq-phone-scroll">
             <div style={{ position: 'relative', height: contentHeight ? contentHeight * scale : undefined }}>
               <div ref={contentRef} style={{ position: 'absolute', top: 0, left: 0, width: PHONE_CONTENT_WIDTH, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
-                <PageBackground profile={profile} className={`min-h-[844px] px-5 pb-8 pt-12 ${skin}`}>
+                <PageBackground profile={profile} className={`min-h-[844px] px-5 py-8 ${skin}`}>
                   {children}
                 </PageBackground>
               </div>
@@ -2420,6 +2424,24 @@ function DeviceToggle({ device, onChange }: { device: PreviewDevice; onChange: (
   )
 }
 
+function ProfilePageContent({ profile, links, projects, onTrack, ctaHref = '/signup' }: { profile: Profile; links: LinkItem[]; projects: Project[]; onTrack?: CardTrack; ctaHref?: string }) {
+  const { t } = useI18n()
+  const chromePill = profile.theme === 'dark'
+    ? 'border-white/15 bg-white/5 text-[#f5f5f2] hover:bg-white/10'
+    : 'border-border bg-card/80 backdrop-blur-sm hover:bg-card'
+  return (
+    <div className="relative mx-auto max-w-2xl">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Logo />
+        <Link href={ctaHref} className={`inline-flex items-center whitespace-nowrap rounded-full border px-4 py-2 text-xs font-medium transition ${chromePill}`}>
+          {t('createYours')} <ArrowUpRight className="ml-1 inline size-3" />
+        </Link>
+      </div>
+      <div className="mt-8 sm:mt-10"><ProfileCard profile={profile} links={links} projects={projects} onTrack={onTrack} /></div>
+    </div>
+  )
+}
+
 // Single entry point for every live-preview surface in the workspace (overview, profile editor,
 // appearance editor, onboarding). Keeping the device toggle + frame selection in one place means
 // every preview behaves identically and stays correct if the preview mechanics ever change.
@@ -2438,9 +2460,9 @@ function LivePreview({ profile, links, projects, note = true }: { profile: Profi
         <DeviceToggle device={device} onChange={setDevice} />
       </div>
       {device === 'phone' ? (
-        <PhonePreviewFrame profile={profile}><ProfileCard profile={profile} links={links} projects={projects} preview /></PhonePreviewFrame>
+        <PhonePreviewFrame profile={profile}><ProfilePageContent profile={profile} links={links} projects={projects} /></PhonePreviewFrame>
       ) : (
-        <DesktopPreviewFrame profile={profile}><ProfileCard profile={profile} links={links} projects={projects} preview /></DesktopPreviewFrame>
+        <DesktopPreviewFrame profile={profile}><ProfilePageContent profile={profile} links={links} projects={projects} /></DesktopPreviewFrame>
       )}
     </div>
   )
@@ -2704,21 +2726,12 @@ export function PublicProfile({ username }: { username?: string }) {
   }
   const loaded = data !== 'missing' ? data : null
   const pageDark = loaded ? loaded.profile.theme === 'dark' : false
-  const chromePill = pageDark
-    ? 'border-white/15 bg-white/5 text-[#f5f5f2] hover:bg-white/10'
-    : 'border-border bg-card/80 backdrop-blur-sm hover:bg-card'
   const noticeCard = pageDark ? 'border-white/10 bg-white/5' : 'border-border bg-card'
   const noticeSub = pageDark ? 'text-[#adb1a9]' : 'text-muted-foreground'
   return (
     <main className={`relative min-h-screen px-5 py-8 sm:py-10 ${skin} ${animated ? 'pexiloq-animated-gradient' : ''}`} style={pageStyle}>
       {overlay && loaded && <div className="pointer-events-none absolute inset-0" style={{ backgroundColor: loaded.profile.theme === 'dark' ? '#000000' : '#ffffff', opacity: Math.min(Math.max(loaded.profile.backgroundOverlay, 0), 1) }} />}
       <div className="relative mx-auto max-w-2xl">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Logo />
-          <Link href={user ? '/dashboard' : '/signup'} className={`inline-flex items-center whitespace-nowrap rounded-full border px-4 py-2 text-xs font-medium transition ${chromePill}`}>
-            {t('createYours')} <ArrowUpRight className="ml-1 inline size-3" />
-          </Link>
-        </div>
         {data === 'missing' && (
           <div className={`mt-16 rounded-2xl border p-10 text-center ${noticeCard}`}>
             <p className="text-lg font-medium">{t('notFound')}</p>
@@ -2732,7 +2745,7 @@ export function PublicProfile({ username }: { username?: string }) {
           </div>
         )}
         {loaded && loaded.profile.isPublic && (
-          <div className="mt-8 sm:mt-10"><ProfileCard profile={loaded.profile} links={loaded.links} projects={loaded.projects} onTrack={track} /></div>
+          <ProfilePageContent profile={loaded.profile} links={loaded.links} projects={loaded.projects} onTrack={track} ctaHref={user ? '/dashboard' : '/signup'} />
         )}
       </div>
     </main>

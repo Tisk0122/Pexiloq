@@ -56,7 +56,7 @@ export default function Page() {
         <div className="relative lg:pl-8">
           <div className="relative mx-auto max-w-[380px] rotate-[2deg] transition-transform duration-500 hover:rotate-0">
             <PhonePreviewFrame profile={hero.bundle.profile}>
-              <ProfileCard profile={hero.bundle.profile} links={hero.bundle.links} projects={hero.bundle.projects} preview />
+              <ProfileCard profile={hero.bundle.profile} links={hero.bundle.links} projects={hero.bundle.projects} />
             </PhonePreviewFrame>
           </div>
           <div className="absolute -bottom-6 -left-2 hidden rounded-2xl border border-border bg-card px-4 py-3 text-xs shadow-[0_12px_35px_rgba(35,35,30,0.08)] sm:block"><Sparkles className="mr-2 inline size-3 text-[#a7926f]" /> {t('shareOneLink')}</div>
@@ -73,7 +73,7 @@ export default function Page() {
           {showcase.map(({ style, bundle }) => (
             <div key={style} className="flex flex-col items-center">
               <PhonePreviewFrame profile={bundle.profile}>
-                <ProfileCard profile={bundle.profile} links={bundle.links} projects={bundle.projects} preview />
+                <ProfileCard profile={bundle.profile} links={bundle.links} projects={bundle.projects} />
               </PhonePreviewFrame>
               <span className="mt-5 rounded-full border border-border bg-card px-4 py-1.5 text-xs font-medium text-muted-foreground">{t(patternLabelKey[style])}</span>
             </div>
