@@ -4,13 +4,13 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ArrowUpRight, Check, CircleAlert, Copy, ExternalLink, Eye, GripVertical, Layers, Link2, Loader2, LogOut, Menu, Monitor, Palette, Plus, Save, Settings, Smartphone, Trash2, Type, Upload, UserRound, X, ZoomIn, Zap } from 'lucide-react'
-import { auth, deleteAccount, firebaseEnabled, isUsernameAvailable, loadAnalytics, loadPublicBundle, loadUserBundle, recordAnalytics, saveItems, saveProfile } from '@/lib/firebase'
+import { auth, deleteAccount, firebaseEnabled, isUsernameAvailable, loadAnalytics, loadDailyAnalytics, loadPublicBundle, loadUserBundle, recordAnalytics, saveItems, saveProfile, sendVerificationEmail, type DailyPoint } from '@/lib/firebase'
 import { LanguageSwitcher, useI18n } from '@/components/i18n-provider'
 import { siteHost } from '@/lib/site'
 import { deleteUser, EmailAuthProvider, GoogleAuthProvider, onAuthStateChanged, reauthenticateWithCredential, reauthenticateWithPopup, signOut } from 'firebase/auth'
 
 export type LinkDisplayStyle = 'default' | 'large' | 'thumbnail' | 'text'
-export type LinkItem = { id: string; title: string; url: string; visible: boolean; icon?: string; imageURL?: string; bgColor?: string; iconColor?: string; displayStyle?: LinkDisplayStyle }
+export type LinkItem = { id: string; title: string; url: string; visible: boolean; icon?: string; imageURL?: string; bgColor?: string; iconColor?: string; displayStyle?: LinkDisplayStyle; subtitle?: string; visibleFrom?: string; visibleUntil?: string }
 export type Project = { id: string; title: string; description: string; url: string; imageURL?: string; technologies: string[]; visible: boolean }
 export type Theme = 'light' | 'dark'
 export type ButtonStyle = 'solid' | 'outline' | 'ghost'
@@ -269,9 +269,42 @@ export function Logo() {
   return <Link href="/" className="flex shrink-0 items-center" aria-label="Pexiloq home"><img src="/Pexiloq_Logo.png" alt="Pexiloq" width={1774} height={887} className="h-14 w-auto object-contain sm:h-16 md:h-20 lg:h-24" /></Link>
 }
 
+// A nudge for accounts that signed up by email but haven't confirmed the address yet. Firebase
+// flags these accounts (emailVerified false) but never reminds them, so an unverified email is
+// easy to lose — and a lost address means a locked-out account when they reset passwords later.
+function VerifyEmailBanner() {
+  const { user } = useAuth()
+  const { t } = useI18n()
+  const [sending, setSending] = useState(false)
+  const [status, setStatus] = useState('')
+  if (!user || !user.email || user.emailVerified) return null
+  async function resend() {
+    setSending(true)
+    setStatus('')
+    const ok = await sendVerificationEmail()
+    setStatus(ok ? t('verificationSent') : t('somethingWrong'))
+    setSending(false)
+  }
+  return (
+    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-secondary/40 px-5 py-4">
+      <div className="flex items-start gap-3">
+        <CircleAlert className="mt-0.5 size-4 shrink-0" />
+        <div>
+          <p className="text-sm font-medium">{t('verifyEmail')}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{t('verifyEmailDesc')}</p>
+        </div>
+      </div>
+      <button onClick={() => void resend()} disabled={sending} className="rounded-full border bg-card px-4 py-2 text-xs font-medium transition hover:border-foreground/40 disabled:opacity-60">
+        {sending ? <Loader2 className="mr-1.5 inline size-3 animate-spin" /> : null}{status || t('resendVerification')}
+      </button>
+    </div>
+  )
+}
+
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter(); const pathname = usePathname(); const [mobile, setMobile] = useState(false); const [loggingOut, setLoggingOut] = useState(false); const { t } = useI18n()
   const { profile, loading, uid } = useWorkspace()
+  const { user } = useAuth()
   const nav = [
     { href: '/dashboard', label: t('overview'), icon: Eye },
     { href: '/dashboard/profile', label: t('profile'), icon: UserRound },
@@ -424,7 +457,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </Link>
           </div>
         </aside>
-        <main className="min-w-0 flex-1 p-6 lg:p-10">{children}</main>
+        <main className="min-w-0 flex-1 p-6 lg:p-10">
+          {user && <VerifyEmailBanner />}
+          {children}
+        </main>
       </div>
     </div>
   )
@@ -476,11 +512,11 @@ export function useWorkspace() {
 }
 
 export function useAuth() {
-  const [user, setUser] = useState<{ uid: string; displayName: string | null; email: string | null } | null>(null)
+  const [user, setUser] = useState<{ uid: string; displayName: string | null; email: string | null; emailVerified: boolean } | null>(null)
   const [loading, setLoading] = useState(true)
   useEffect(() => {
     if (!auth) { setLoading(false); return }
-    return onAuthStateChanged(auth, (u) => { setUser(u ? { uid: u.uid, displayName: u.displayName, email: u.email } : null); setLoading(false) })
+    return onAuthStateChanged(auth, (u) => { setUser(u ? { uid: u.uid, displayName: u.displayName, email: u.email, emailVerified: !!u.emailVerified } : null); setLoading(false) })
   }, [])
   return { user, loading }
 }
@@ -518,6 +554,78 @@ function faviconFor(url: string) {
   try { return `https://www.google.com/s2/favicons?sz=64&domain=${new URL(url).hostname}` } catch { return '' }
 }
 
+// Only ever let users navigate to real web URLs. Without this, a link or website value stored
+// on a profile could carry a javascript:/data: URI straight into an <a href> and execute code
+// when a visitor clicks it. Render anchors are guarded here at the point they're built, and the
+// editors show an inline warning for values that fall this check.
+function isSafeWebUrl(raw?: string | null): boolean {
+  if (!raw) return true
+  if (raw === 'https://' || raw === 'http://') return true
+  try {
+    const protocol = new URL(raw).protocol
+    return protocol === 'http:' || protocol === 'https:'
+  } catch { return false }
+}
+function safeHref(raw?: string | null): string | undefined {
+  if (!raw) return undefined
+  try {
+    const url = new URL(raw)
+    return url.protocol === 'http:' || url.protocol === 'https:' ? raw : undefined
+  } catch { return undefined }
+}
+
+// Links can be told to only surface inside a date window (visibleFrom/visibleUntil, both
+// YYYY-MM-DD). A link falls outside its window when today is before the start or after the end;
+// either field left empty has no bound. Always-on links without scheduling keep the old behavior.
+function isLinkActive(item: { visibleFrom?: string; visibleUntil?: string }): boolean {
+  const today = new Date()
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  if (item.visibleFrom && item.visibleFrom > todayKey) return false
+  if (item.visibleUntil && item.visibleUntil < todayKey) return false
+  return true
+}
+
+// Self-hosted QR codes. This used to point at an external API (api.qrserver.com), which made
+// every QR render depend on a third party: it needed to be reachable with a valid cross-origin
+// response, it had no offline story, and it silently dropped the privacy emphasis the rest of
+// the product is built around. The `qrcode` package generates the code locally (SVG/PNG), so
+// both the inline preview and the large PNG download work with no external request at all.
+function QrImage({ value, size, className }: { value: string; size: number; className?: string }) {
+  const [src, setSrc] = useState('')
+  useEffect(() => {
+    let live = true
+    import('qrcode').then(({ toDataURL }) =>
+      toDataURL(value, { width: size, margin: 1, errorCorrectionLevel: 'M' }).then((data) => { if (live) setSrc(data) })
+    ).catch(() => {})
+    return () => { live = false }
+  }, [value, size])
+  if (src) return <img src={src} alt="" width={size} height={size} className={className} />
+  return <span aria-hidden="true" className={className} style={{ width: size, height: size }} />
+}
+
+async function downloadQr(value: string, filename: string) {
+  const { toDataURL } = await import('qrcode')
+  const data = await toDataURL(value, { width: 512, margin: 2, errorCorrectionLevel: 'M' })
+  const anchor = document.createElement('a')
+  anchor.href = data
+  anchor.download = filename
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+}
+
+function downloadTextFile(filename: string, text: string, mime = 'application/json') {
+  const blob = new Blob([text], { type: `${mime};charset=utf-8` })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
+}
+
 // Picks black or white text for readable contrast against an arbitrary hex background color.
 function contrastColor(hex: string): string {
   const clean = hex.replace('#', '')
@@ -528,10 +636,6 @@ function contrastColor(hex: string): string {
   const b = parseInt(full.slice(4, 6), 16)
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
   return luminance > 0.6 ? '#151515' : '#ffffff'
-}
-
-function qrCodeFor(url: string, size = 220) {
-  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&data=${encodeURIComponent(url)}`
 }
 
 const socialMeta: Record<SocialPlatform, { label: string; placeholder: string; prefix?: string }> = {
@@ -639,7 +743,7 @@ type Skin = { card: string; sub: string; bar: string; strip: string; strongText:
 type CardTrack = (type: 'links' | 'projects' | 'socials', key: string) => void
 
 function LinksSection({ profile, links, skin, onTrack }: { profile: Profile; links: LinkItem[]; skin: Skin; onTrack?: CardTrack }) {
-  const visibleLinks = links.filter((item) => item.visible)
+  const visibleLinks = links.filter((item) => item.visible && isLinkActive(item))
   if (!visibleLinks.length) return null
   const dark = profile.theme === 'dark'
   const spacing = spacingConfig[profile.spacing || 'cozy']
@@ -677,18 +781,24 @@ function LinksSection({ profile, links, skin, onTrack }: { profile: Profile; lin
     const style = item.displayStyle && item.displayStyle !== 'default' ? item.displayStyle : null
     if (style === 'text') {
       return (
-        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} className={`flex items-center gap-2 px-1 py-2 text-left text-sm font-medium underline underline-offset-4 transition hover:opacity-70`} style={{ color: item.bgColor || profile.accentColor }}>
+        <a key={item.id} href={safeHref(item.url)} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} className={`flex items-center gap-2 px-1 py-2 text-left text-sm font-medium underline underline-offset-4 transition hover:opacity-70`} style={{ color: item.bgColor || profile.accentColor }}>
           {icon(item, 'size-3.5')}
-          <span className="truncate">{item.title}</span>
+          <span className="min-w-0">
+            <span className="block truncate">{item.title}</span>
+            {item.subtitle && <span className={`block truncate text-xs font-normal opacity-70 no-underline underline-offset-4`}>{item.subtitle}</span>}
+          </span>
         </a>
       )
     }
     if (style === 'large') {
       return (
-        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} {...linkStyle(item, `${baseLinkClass} ${spacing.linkPad} min-h-16 text-base`)}>
+        <a key={item.id} href={safeHref(item.url)} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} {...linkStyle(item, `${baseLinkClass} ${spacing.linkPad} min-h-16 text-base`)}>
           <span className="flex min-w-0 items-center gap-3">
             {icon(item, 'size-5')}
-            <span className="truncate">{item.title}</span>
+            <span className="min-w-0">
+              <span className="block truncate">{item.title}</span>
+              {item.subtitle && <span className="block truncate text-xs font-normal opacity-70">{item.subtitle}</span>}
+            </span>
           </span>
           <ExternalLink className="size-4 shrink-0 opacity-70" />
         </a>
@@ -696,13 +806,15 @@ function LinksSection({ profile, links, skin, onTrack }: { profile: Profile; lin
     }
     if (style === 'thumbnail') {
       return (
-        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} className={`flex items-center gap-4 rounded-2xl border p-3 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 ${skin.bar}`} style={item.bgColor ? { backgroundColor: item.bgColor, color: contrastColor(item.bgColor) } : undefined}>
+        <a key={item.id} href={safeHref(item.url)} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} className={`flex items-center gap-4 rounded-2xl border p-3 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 ${skin.bar}`} style={item.bgColor ? { backgroundColor: item.bgColor, color: contrastColor(item.bgColor) } : undefined}>
           {item.imageURL
             ? <CardImg src={item.imageURL} alt={item.title} className="size-14 shrink-0 rounded-xl" />
             : <span className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-xl bg-secondary text-lg">{icon(item, 'size-6')}</span>}
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium">{item.title}</span>
-            <span className={`mt-0.5 block truncate text-xs ${item.bgColor ? 'opacity-70' : skin.sub}`}>{item.url.replace(/^https?:\/\//, '')}</span>
+            {item.subtitle
+              ? <span className={`mt-0.5 block truncate text-xs ${item.bgColor ? 'opacity-70' : skin.sub}`}>{item.subtitle}</span>
+              : <span className={`mt-0.5 block truncate text-xs ${item.bgColor ? 'opacity-70' : skin.sub}`}>{item.url.replace(/^https?:\/\//, '')}</span>}
           </span>
           <ExternalLink className="size-4 shrink-0 opacity-50 transition group-hover:opacity-80" />
         </a>
@@ -710,10 +822,13 @@ function LinksSection({ profile, links, skin, onTrack }: { profile: Profile; lin
     }
     // No per-link override: default look.
     return (
-      <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} {...linkStyle(item, `group ${baseLinkClass} ${spacing.linkPad}`)}>
+      <a key={item.id} href={safeHref(item.url)} target="_blank" rel="noreferrer" onClick={() => onTrack?.('links', item.id)} {...linkStyle(item, `group ${baseLinkClass} ${spacing.linkPad}`)}>
         <span className="flex min-w-0 items-center gap-3">
           {iconChip(item)}
-          <span className="truncate">{item.title}</span>
+          <span className="min-w-0">
+            <span className="block truncate">{item.title}</span>
+            {item.subtitle && <span className="block truncate text-xs font-normal opacity-70">{item.subtitle}</span>}
+          </span>
         </span>
         <ExternalLink className="size-4 shrink-0 opacity-60 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
       </a>
@@ -737,11 +852,18 @@ function ProjectsSection({ profile, projects, skin, onTrack, t }: { profile: Pro
   return (
     <div className={`${spacing.sectionGap} grid gap-3 sm:grid-cols-2`}>
       {visibleProjects.map((item, index) => (
-        <a key={item.id} href={item.url} target="_blank" rel="noreferrer" onClick={() => onTrack?.('projects', item.id)} className={`flex min-h-32 flex-col rounded-xl p-4 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 ${index === 0 ? '' : skin.strip}`} style={index === 0 ? { backgroundColor: profile.accentColor, color: leadText } : undefined}>
+        <a key={item.id} href={safeHref(item.url)} target="_blank" rel="noreferrer" onClick={() => onTrack?.('projects', item.id)} className={`flex min-h-32 flex-col rounded-xl p-4 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 ${index === 0 ? '' : skin.strip}`} style={index === 0 ? { backgroundColor: profile.accentColor, color: leadText } : undefined}>
           {item.imageURL && <div className="mb-3"><CardImg src={item.imageURL} alt={item.title} className="aspect-[16/10] w-full rounded-lg" /></div>}
           <span className={`text-[10px] font-medium uppercase tracking-widest ${index === 0 ? '' : skin.sub}`} style={index === 0 ? { color: leadSubText } : undefined}>{t('selectedWork')}</span>
           <p className={`${item.imageURL ? 'mt-3' : 'mt-8'} text-sm font-medium leading-snug ${index === 0 ? '' : skin.strongText}`}>{item.title}</p>
           {item.description && <p className={`mt-1.5 line-clamp-2 text-xs leading-relaxed ${index === 0 ? '' : skin.sub}`} style={index === 0 ? { color: leadSubText } : undefined}>{item.description}</p>}
+          {Array.isArray(item.technologies) && item.technologies.filter(Boolean).length > 0 && (
+            <span className="mt-3 flex flex-wrap gap-1.5">
+              {item.technologies.filter(Boolean).map((tech) => (
+                <span key={tech} className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${index === 0 ? 'bg-white/15' : 'bg-secondary/80'}`} style={index === 0 ? { color: leadText } : undefined}>{tech}</span>
+              ))}
+            </span>
+          )}
         </a>
       ))}
     </div>
@@ -752,6 +874,7 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
   const { t } = useI18n()
   const [copied, setCopied] = useState(false)
   const [showQr, setShowQr] = useState(false)
+  const qrValue = `https://${typeof window !== 'undefined' ? window.location.host : siteHost}/${profile.username}`
   const dark = profile.theme === 'dark'
   const skin: Skin = dark
     ? { card: 'border-[#3a3d38] bg-[#262926] text-[#f5f5f2]', sub: 'text-[#adb1a9]', bar: 'border-[#3a3d38]', strip: 'bg-[#30332f] text-[#adb1a9]', strongText: 'text-[#f5f5f2]' }
@@ -806,8 +929,8 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
       </div>
       {showQr && !preview && (
         <div className={`mt-4 flex flex-col items-center gap-3 rounded-2xl border pt-5 pb-5 text-center ${dark ? 'border-white/15 bg-white/5' : 'border-[#e3e3dd] bg-secondary/30'}`}>
-          <img src={qrCodeFor(`https://${typeof window !== 'undefined' ? window.location.host : siteHost}/${profile.username}`)} alt={t('qr')} width={148} height={148} className="rounded-xl border bg-white p-2" />
-          <a href={qrCodeFor(`https://${typeof window !== 'undefined' ? window.location.host : siteHost}/${profile.username}`, 512)} download={`${profile.username}-pexiloq-qr.png`} target="_blank" rel="noreferrer" className="text-xs underline underline-offset-4" style={{ color: profile.accentColor }}>{t('downloadQr')}</a>
+          <QrImage value={qrValue} size={148} className="rounded-xl border bg-white p-2" />
+          <button type="button" onClick={() => void downloadQr(qrValue, `${profile.username}-pexiloq-qr.png`)} className="text-xs underline underline-offset-4" style={{ color: profile.accentColor }}>{t('downloadQr')}</button>
         </div>
       )}
       <div className={`px-2 pb-6 pt-7 text-center sm:px-6 ${profile.coverImageURL ? '-mt-7' : ''}`}>
@@ -837,7 +960,7 @@ export function ProfileCard({ profile, links, projects, preview = false, onTrack
         {profile.headline && <p className={`mt-1.5 text-sm font-medium ${skin.sub}`}>{profile.headline}</p>}
         {profile.bio && <p className={`mt-4 text-sm leading-6 mx-auto max-w-sm ${skin.sub}`}>{profile.bio}</p>}
         {profile.website && (
-          <a href={profile.website} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-medium underline decoration-current/30 underline-offset-4 transition hover:decoration-current/70" style={{ color: profile.accentColor }}>
+          <a href={safeHref(profile.website)} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-medium underline decoration-current/30 underline-offset-4 transition hover:decoration-current/70" style={{ color: profile.accentColor }}>
             {profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
           </a>
         )}
@@ -873,12 +996,21 @@ export function Overview() {
   const { profile, links, projects, uid } = useWorkspace()
   const { t } = useI18n()
   const [stats, setStats] = useState<{ views: number; links: Record<string, number>; projects: Record<string, number>; socials: Record<string, number> } | null>(null)
+  const [daily, setDaily] = useState<DailyPoint[]>([])
+  const [trendDays, setTrendDays] = useState(7)
+  const [trendMetric, setTrendMetric] = useState<'views' | 'clicks'>('views')
   useEffect(() => {
     if (!uid) { setStats(null); return }
     let live = true
     void loadAnalytics(uid).then((s) => { if (live) setStats(s) })
     return () => { live = false }
   }, [uid])
+  useEffect(() => {
+    if (!uid) { setDaily([]); return }
+    let live = true
+    void loadDailyAnalytics(uid, trendDays).then((points) => { if (live) setDaily(points) })
+    return () => { live = false }
+  }, [uid, trendDays])
   if (!profile.onboarded && !(profile.displayName && profile.username)) return <Onboarding />
   const totalClicks = Math.max(0, Object.values(stats?.links || {}).reduce((a, b) => a + b, 0) + Object.values(stats?.projects || {}).reduce((a, b) => a + b, 0) + Object.values(stats?.socials || {}).reduce((a, b) => a + b, 0))
   const clicks = [
@@ -910,6 +1042,27 @@ export function Overview() {
         <Stat label={t('pageViews')} value={String(stats?.views ?? 0)} accent={profile.accentColor} icon={Eye} />
         <Stat label={t('totalClicks')} value={String(totalClicks)} accent={profile.accentColor} icon={Zap} />
       </div>
+      <section className="mt-8 rounded-2xl border bg-card p-6 shadow-xs">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/80">{t('trafficTrend')}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t('trendHint')}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex rounded-full border p-0.5 text-xs" role="group" aria-label={t('trafficTrend')}>
+              {(['views', 'clicks'] as const).map((m) => (
+                <button key={m} type="button" onClick={() => setTrendMetric(m)} aria-pressed={trendMetric === m} className={`rounded-full px-3 py-1 transition ${trendMetric === m ? 'bg-secondary font-medium' : 'text-muted-foreground hover:text-foreground'}`}>{m === 'views' ? t('trendViews') : t('trendClicks')}</button>
+              ))}
+            </div>
+            <div className="flex rounded-full border p-0.5 text-xs" role="group" aria-label={t('trafficTrend')}>
+              {[7, 30].map((d) => (
+                <button key={d} type="button" onClick={() => setTrendDays(d)} aria-pressed={trendDays === d} className={`rounded-full px-3 py-1 transition ${trendDays === d ? 'bg-secondary font-medium' : 'text-muted-foreground hover:text-foreground'}`}>{d === 7 ? t('last7Days') : t('last30Days')}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <TrendChart points={daily} metric={trendMetric} accent={profile.accentColor} t={t} />
+      </section>
       <section className="mt-8 rounded-2xl border bg-card p-6 shadow-xs">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-4">
           <div>
@@ -992,6 +1145,45 @@ function Stat({ label, value, accent, icon: Icon }: { label: string; value: stri
         {Icon && <Icon className="size-4 text-muted-foreground/60" />}
       </div>
       <p className="mt-3 text-3xl font-medium tracking-[-0.06em]" style={{ color: accent || 'currentColor' }}>{value}</p>
+    </div>
+  )
+}
+
+// Per-day bar chart for the traffic trend in Overview. Zero-data days render as a short neutral
+// stub so the span of time stays visible; tooltips (title) carry the per-day numbers rather than
+// cramming labels into the chart itself.
+function TrendChart({ points, metric, accent, t }: { points: DailyPoint[]; metric: 'views' | 'clicks'; accent: string; t: (key: string) => string }) {
+  if (points.length === 0) {
+    return (
+      <div className="mt-6 flex flex-col items-center justify-center rounded-xl bg-secondary/40 px-4 py-8 text-center">
+        <Eye className="size-8 text-muted-foreground/60" />
+        <p className="mt-2 text-sm font-medium">{t('noClicksYet')}</p>
+      </div>
+    )
+  }
+  const values = points.map((p) => p[metric])
+  const max = Math.max(1, ...values)
+  const total = values.reduce((a, b) => a + b, 0)
+  const label = metric === 'views' ? t('trendViews') : t('trendClicks')
+  return (
+    <div className="mt-6">
+      <div className="flex items-end gap-3">
+        <p className="mb-1 shrink-0 font-mono text-xs text-muted-foreground">{label} · {total}</p>
+        <div className="flex h-36 flex-1 items-end gap-[3px]">
+          {points.map((p) => {
+            const v = p[metric]
+            const height = v > 0 ? Math.max(8, (v / max) * 100) : 3
+            return (
+              <div
+                key={p.date}
+                title={`${p.date} — ${label}: ${v}`}
+                className={`min-w-0 flex-1 rounded-t transition hover:opacity-80 ${v > 0 ? '' : 'bg-secondary'}`}
+                style={v > 0 ? { height: `${height}%`, backgroundColor: accent } : { height: `${height}%` }}
+              />
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }
@@ -1203,8 +1395,10 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
               <div className="grid flex-1 gap-2">
                 <div className="grid gap-2 md:grid-cols-2">
                   <input value={item.title} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, title: e.target.value } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('linkTitle')} />
-                  <input value={item.url} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, url: e.target.value } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm" placeholder="https://" />
+                  <input value={item.url} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, url: e.target.value } : x))} className={`rounded-lg border bg-background px-3 py-2 text-sm ${!isSafeWebUrl(item.url) ? 'border-destructive/60' : ''}`} placeholder="https://" />
                 </div>
+                {!isSafeWebUrl(item.url) && <p className="flex items-center gap-1.5 text-xs text-destructive"><CircleAlert className="size-3.5 shrink-0" />{t('invalidUrl')}</p>}
+                <input value={item.subtitle || ''} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, subtitle: e.target.value } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('linkSubtitlePlaceholder')} aria-label={t('linkSubtitle')} />
                 <div className="flex items-center gap-2">
                   <input value={item.icon || ''} maxLength={4} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, icon: e.target.value.trim() } : x))} className="w-14 rounded-lg border bg-background px-2 py-2 text-center text-lg" placeholder={t('emoji')} aria-label={t('emoji')} />
                   <div className="flex gap-0.5 overflow-x-auto">{linkEmojis.map((emoji) => <button key={emoji} type="button" onClick={() => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, icon: x.icon === emoji ? '' : emoji } : x))} aria-pressed={item.icon === emoji} className={`shrink-0 rounded-md p-1 text-base transition ${item.icon === emoji ? 'bg-secondary' : 'hover:bg-secondary/60'}`}>{emoji}</button>)}</div>
@@ -1214,6 +1408,18 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
                   {linkDisplayStyles.map((style) => (
                     <button key={style} type="button" onClick={() => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, displayStyle: style } : x))} aria-pressed={(item.displayStyle || 'default') === style} className={`rounded-full border px-3 py-1 text-xs capitalize transition ${(item.displayStyle || 'default') === style ? 'border-foreground bg-secondary font-medium' : 'hover:border-foreground/40'}`}>{t(`linkStyle${style.charAt(0).toUpperCase()}${style.slice(1)}`)}</button>
                   ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-xs text-muted-foreground">{t('linkScheduling')}</span>
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>{t('visibleFrom')}</span>
+                    <input type="date" value={item.visibleFrom || ''} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, visibleFrom: e.target.value || undefined } : x))} className="rounded-lg border bg-background px-2 py-1.5 text-xs" />
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>{t('visibleUntil')}</span>
+                    <input type="date" value={item.visibleUntil || ''} onChange={(e) => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, visibleUntil: e.target.value || undefined } : x))} className="rounded-lg border bg-background px-2 py-1.5 text-xs" />
+                  </label>
+                  {(item.visibleFrom || item.visibleUntil) && <button type="button" onClick={() => setDraftLinks(draftLinks.map((x) => x.id === item.id ? { ...x, visibleFrom: undefined, visibleUntil: undefined } : x))} className="text-xs text-muted-foreground underline underline-offset-4">{t('clear')}</button>}
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <label className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs text-muted-foreground">
@@ -1268,8 +1474,10 @@ export function Editor({ kind }: { kind: 'profile' | 'links' | 'projects' | 'app
               </div>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 <input value={item.title} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, title: e.target.value } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('projectTitle')} />
-                <input value={item.url} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, url: e.target.value } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm" placeholder={t('projectUrl')} />
+                <input value={item.url} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, url: e.target.value } : x))} className={`rounded-lg border bg-background px-3 py-2 text-sm ${!isSafeWebUrl(item.url) ? 'border-destructive/60' : ''}`} placeholder={t('projectUrl')} />
+                {!isSafeWebUrl(item.url) && <p className="flex items-center gap-1.5 text-xs text-destructive md:col-span-2"><CircleAlert className="size-3.5 shrink-0" />{t('invalidUrl')}</p>}
                 <textarea value={item.description} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, description: e.target.value } : x))} className="min-h-24 rounded-lg border bg-background px-3 py-2 text-sm md:col-span-2" placeholder={t('description')} />
+                <input value={(item.technologies || []).join(', ')} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, technologies: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm md:col-span-2" placeholder={t('technologiesHint')} aria-label={t('technologies')} />
                 <input value={item.imageURL || ''} onChange={(e) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, imageURL: e.target.value.trim() } : x))} className="rounded-lg border bg-background px-3 py-2 text-sm md:col-span-2" placeholder="Image URL (optional) — https://" />
                 <ImageUploader uid={uid} maxDimension={1024} value={item.imageURL} shape="rect" aspect={16 / 9} onUploaded={(url) => setDraftProjects(draftProjects.map((x) => x.id === item.id ? { ...x, imageURL: url } : x))} className="md:col-span-2" />
               </div>
@@ -2250,10 +2458,12 @@ function PageBackground({ profile, className, children }: { profile: Profile; cl
 }
 
 export function SettingsPage() {
-  const { profile, persistProfile } = useWorkspace()
+  const { profile, links, projects, persistProfile } = useWorkspace()
   const { t } = useI18n()
   const router = useRouter()
   const [notice, setNotice] = useState('')
+  const [exporting, setExporting] = useState(false)
+  const [exportNotice, setExportNotice] = useState('')
   const [confirming, setConfirming] = useState(false)
   const [confirmText, setConfirmText] = useState('')
   const [busy, setBusy] = useState(false)
@@ -2303,6 +2513,44 @@ export function SettingsPage() {
   }
   const isGoogle = auth?.currentUser?.providerData.some((p) => p.providerId === 'google.com') ?? false
   const resetDelete = () => { setConfirming(false); setConfirmText(''); setError(''); setNeedReauth(false); setReauthPassword('') }
+  function markExported() { setExporting(false); setExportNotice(t('exported')); window.setTimeout(() => setExportNotice(''), 2500) }
+  function exportJson() {
+    const payload = { exportedAt: new Date().toISOString(), app: 'Pexiloq', profile, links, projects }
+    downloadTextFile(`${profile.username || 'my-profile'}-pexiloq.json`, JSON.stringify(payload, null, 2), 'application/json')
+    markExported()
+  }
+  function exportMarkdown() {
+    const lines: string[] = ['# Pexiloq export', '', `**Display name:** ${profile.displayName}`, `**Username:** ${profile.username}`]
+    if (profile.headline) lines.push(`**Headline:** ${profile.headline}`)
+    if (profile.bio) lines.push(`**Bio:** ${profile.bio}`)
+    if (profile.website) lines.push(`**Website:** ${profile.website}`)
+    lines.push('')
+    const socialRows = socialPlatforms.filter((p) => profile.socials?.[p])
+    if (socialRows.length) {
+      lines.push('## Socials', '')
+      socialRows.forEach((p) => lines.push(`- ${socialMeta[p].label}: ${profile.socials![p]}`))
+      lines.push('')
+    }
+    const visibleLinks = links.filter((l) => l.visible)
+    if (visibleLinks.length) {
+      lines.push('## Links', '')
+      visibleLinks.forEach((l) => lines.push(`- [${l.title}](${l.url}${l.subtitle ? ` "${l.subtitle}"` : ''})`))
+      lines.push('')
+    }
+    const visibleProjects = projects.filter((p) => p.visible)
+    if (visibleProjects.length) {
+      lines.push('## Projects', '')
+      visibleProjects.forEach((p) => {
+        lines.push(`### ${p.title}`, '')
+        if (p.description) lines.push(p.description, '')
+        if (p.url) lines.push(`Link: ${p.url}`)
+        if (Array.isArray(p.technologies) && p.technologies.length) lines.push(`Technologies: ${p.technologies.join(', ')}`)
+        lines.push('')
+      })
+    }
+    downloadTextFile(`${profile.username || 'my-profile'}-pexiloq.md`, lines.join('\n'), 'text/markdown')
+    markExported()
+  }
   return (
     <>
       <PageHeader eyebrow={t('accountLabel')} title={t('settings')} description={t('settingsDesc')} />
@@ -2323,6 +2571,15 @@ export function SettingsPage() {
         <p className="mt-2 text-sm text-muted-foreground">{r2 === null ? '…' : r2.configured ? t('r2Ready') : t('r2Missing')}</p>
         {r2 !== null && !r2.configured && <pre className="mt-4 overflow-auto rounded-xl bg-secondary p-4 text-xs">R2_ACCOUNT_ID=…<br />R2_ACCESS_KEY_ID=…<br />R2_SECRET_ACCESS_KEY=…<br />R2_BUCKET=…<br />R2_PUBLIC_URL=…</pre>}
         <button onClick={() => { setSaving(true); void persistProfile(profile).finally(() => { setSaving(false); setNotice(t('saved')) }) }} disabled={saving} className="mt-8 rounded-full bg-primary px-5 py-3 text-sm text-primary-foreground disabled:opacity-60">{saving ? <><Loader2 className="mr-2 inline size-4 animate-spin" />{t('saving')}</> : notice || t('saveSettings')}</button>
+      </div>
+      <div className="mt-8 max-w-2xl rounded-2xl border bg-card p-6">
+        <p className="text-sm font-medium">{t('exportData')}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{t('exportDataDesc')}</p>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button onClick={() => { setExporting(true); exportJson() }} disabled={exporting} className="rounded-full border px-5 py-3 text-sm transition hover:border-foreground/40 disabled:opacity-60">{t('downloadJson')}</button>
+          <button onClick={() => { setExporting(true); exportMarkdown() }} disabled={exporting} className="rounded-full border px-5 py-3 text-sm transition hover:border-foreground/40 disabled:opacity-60">{t('downloadMarkdown')}</button>
+          {exportNotice && <span role="status" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Check className="size-3.5" />{exportNotice}</span>}
+        </div>
       </div>
       <div className="mt-8 max-w-2xl rounded-2xl border border-destructive/40 bg-card p-6">
         <p className="text-sm font-medium text-destructive">{t('dangerZone')}</p>

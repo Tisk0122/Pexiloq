@@ -120,6 +120,9 @@ export async function loadPublicBundle(username: string) {
 
 export type AnalyticsData = { views: number; links: Record<string, number>; projects: Record<string, number>; socials: Record<string, number> }
 
+// Views/clicks are also written to a per-day document (analytics/{uid}/days/{YYYY-MM-DD}) in
+// addition to the lifetime counters, so the dashboard can show a traffic trend without ever
+// scanning the original events. Same anonymous data, one extra tiny write per record.
 export async function recordAnalytics(uid: string, kind: 'views' | 'links' | 'projects' | 'socials', key?: string) {
   if (!key && kind !== 'views') return
   try {
@@ -128,7 +131,45 @@ export async function recordAnalytics(uid: string, kind: 'views' | 'links' | 'pr
     const ref = doc(firestore, 'analytics', uid)
     if (kind === 'views') await setDoc(ref, { views: increment(1) }, { merge: true })
     else await setDoc(ref, { [kind]: { [key as string]: increment(1) } }, { merge: true })
+    const day = new Date().toISOString().slice(0, 10)
+    const dailyRef = doc(firestore, 'analytics', uid, 'days', day)
+    if (kind === 'views') await setDoc(dailyRef, { views: increment(1) }, { merge: true })
+    else await setDoc(dailyRef, { [kind]: { [key as string]: increment(1) } }, { merge: true })
   } catch { /* best effort */ }
+}
+
+export type DailyPoint = { date: string; views: number; clicks: number }
+
+function sumCounters(map: Record<string, number> | undefined): number {
+  return Object.values(map || {}).reduce((a, b) => a + (typeof b === 'number' ? b : 0), 0)
+}
+
+export async function loadDailyAnalytics(uid: string, days: number): Promise<DailyPoint[]> {
+  try {
+    const { db: firestore } = requireFirebase()
+    const { collection: collectionRef, getDocs, orderBy, query, where } = await import('firebase/firestore')
+    const start = new Date()
+    start.setDate(start.getDate() - days + 1)
+    start.setHours(0, 0, 0, 0)
+    const snap = await getDocs(query(collectionRef(firestore, 'analytics', uid, 'days'), where('__name__', '>=', start.toISOString().slice(0, 10)), orderBy('__name__')))
+    const points: DailyPoint[] = []
+    snap.docs.forEach((d) => {
+      const data = d.data()
+      points.push({ date: d.id, views: data.views || 0, clicks: sumCounters(data.links) + sumCounters(data.projects) + sumCounters(data.socials) })
+    })
+    return points
+  } catch { return [] }
+}
+
+export async function sendVerificationEmail(): Promise<boolean> {
+  try {
+    const { auth: fbAuth } = requireFirebase()
+    const user = fbAuth.currentUser
+    if (!user) return false
+    const { sendEmailVerification } = await import('firebase/auth')
+    await sendEmailVerification(user)
+    return true
+  } catch { return false }
 }
 
 export async function loadAnalytics(uid: string): Promise<AnalyticsData | null> {
